@@ -1,0 +1,1664 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>试卷管理系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: #1890ff;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            text-align: center;
+            font-size: 28px;
+        }
+        .nav {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .nav button {
+            padding: 12px 24px;
+            border: none;
+            background: white;
+            color: #1890ff;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .nav button:hover {
+            background: #e6f7ff;
+        }
+        .nav button.active {
+            background: #1890ff;
+            color: white;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            margin-bottom: 20px;
+            color: #333;
+            font-size: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .form-group textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+        .btn-danger {
+            background: #ff4d4f;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #ff7875;
+        }
+        .btn-success {
+            background: #52c41a;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #73d13d;
+        }
+        .btn-secondary {
+            background: #666;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #888;
+        }
+        .question-item {
+            border: 1px solid #e8e8e8;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+        }
+        .question-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        .question-type-select {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            min-width: 150px;
+        }
+        .options-container {
+            margin: 15px 0;
+        }
+        .option-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .option-item input[type="text"] {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        .exam-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .exam-item {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            transition: all 0.3s;
+        }
+        .exam-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .exam-item h3 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .exam-item p {
+            color: #666;
+            margin-bottom: 15px;
+            font-size: 14px;
+        }
+        .exam-item .meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #999;
+            font-size: 12px;
+        }
+        .exam-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .exam-actions .btn {
+            flex: 1;
+            text-align: center;
+        }
+        .exam-view {
+            display: none;
+        }
+        .exam-view.active {
+            display: block;
+        }
+        .question-display {
+            background: #fafafa;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            border-left: 4px solid #1890ff;
+        }
+        .question-display h4 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .answer-option {
+            display: flex;
+            align-items: center;
+            padding: 10px 15px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .answer-option:hover {
+            border-color: #1890ff;
+            background: #e6f7ff;
+        }
+        .answer-option.selected {
+            border-color: #1890ff;
+            background: #bae7ff;
+        }
+        .answer-option input[type="radio"],
+        .answer-option input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .tf-symbol {
+            font-size: 20px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .answer-option.selected .tf-symbol {
+            color: #1890ff;
+        }
+        .question-options {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .option-item {
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+            margin: 2px 0;
+        }
+        .option-letter {
+            font-weight: bold;
+            margin-right: 12px;
+            min-width: 25px;
+            text-align: right;
+        }
+        .option-text {
+            flex: 1;
+        }
+        .option-mark {
+            color: #52c41a;
+            font-weight: bold;
+            margin-left: 15px;
+        }
+        .option-correct {
+            background: #f6ffed;
+            border-left: 3px solid #52c41a;
+            padding: 5px 10px;
+            margin: 2px 0;
+        }
+        .option-user {
+            background: #fff7e6;
+            border-left: 3px solid #fa8c16;
+            padding: 5px 10px;
+            margin: 2px 0;
+        }
+        .option-correct-user {
+            background: #f6ffed;
+            border-left: 3px solid #52c41a;
+            padding: 5px 10px;
+            margin: 2px 0;
+        }
+        .result-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .result-card .score {
+            font-size: 48px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            width: 90%;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal h3 {
+            margin-bottom: 20px;
+        }
+        .modal .form-group {
+            margin-bottom: 15px;
+        }
+        .modal-actions {
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+            margin-top: 20px;
+        }
+        .wechat-config {
+            background: #f0f5ff;
+            padding: 20px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .wechat-config h4 {
+            margin-bottom: 15px;
+            color: #1890ff;
+        }
+        .submission-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 15px;
+            border-bottom: 1px solid #e8e8e8;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .submission-item:hover {
+            background: #f5f5f5;
+        }
+        .submission-item:last-child {
+            border-bottom: none;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+        .badge-success {
+            background: #f6ffed;
+            color: #52c41a;
+            border: 1px solid #b7eb8f;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 60px 20px;
+            color: #999;
+        }
+        .empty-state h3 {
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .upload-area {
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+        }
+        .upload-area:hover {
+            border-color: #1890ff;
+            background: #f0f5ff;
+        }
+        .upload-area input[type="file"] {
+            display: none;
+        }
+        .upload-area .btn {
+            margin-top: 10px;
+        }
+        .upload-preview {
+            background: #fafafa;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .upload-preview h4 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .preview-question {
+            padding: 10px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        .preview-question:last-child {
+            border-bottom: none;
+        }
+        .preview-question .type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .type-single { background: #e6f7ff; color: #1890ff; }
+        .type-multiple { background: #fff7e6; color: #fa8c16; }
+        .type-truefalse { background: #f6ffed; color: #52c41a; }
+        .type-fillblank { background: #fff0f0; color: #ff4d4f; }
+        .fillblank-input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .file-format-hint {
+            background: #f0f5ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .file-format-hint h4 {
+            color: #1890ff;
+            margin-bottom: 10px;
+        }
+        .file-format-hint ul {
+            margin-left: 20px;
+        }
+        .file-format-hint li {
+            margin: 5px 0;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>📝 试卷管理系统</h1>
+    </header>
+
+    <div class="container">
+        <div class="nav">
+            <button class="active" onclick="showView('list')">试卷列表</button>
+            <button onclick="showView('create')">创建试卷</button>
+            <button onclick="showView('webhooks')">企业微信配置</button>
+        </div>
+
+        <div id="listView" class="exam-view active">
+            <div class="card">
+                <h2>试卷列表</h2>
+                <div id="examList" class="exam-list"></div>
+            </div>
+        </div>
+
+        <div id="createView" class="exam-view">
+            <div class="card">
+                <h2>创建新试卷</h2>
+
+                <div class="file-format-hint">
+                    <h4>💡 文件导入格式说明（行格式）</h4>
+                    <ul>
+                        <li><strong>Excel文件(.xlsx/.xls)：</strong>每行一道题<br>
+                            第1列：题目内容<br>
+                            第2列：题型（单选/多选/判断/填空）<br>
+                            第3列起：选项A/B/C/D 或 判断题答案<br>
+                            倒数第2列：正确答案<br>
+                            最后1列：分值
+                        </li>
+                        <li><strong>Word文件(.docx)：</strong>支持段落和表格格式，题目以数字序号开头</li>
+                    </ul>
+                </div>
+
+                <div class="upload-area" id="uploadArea">
+                    <p>📁 拖拽文件到此处或点击选择文件上传</p>
+                    <p style="font-size: 12px; color: #999; margin-top: 10px;">支持 .xlsx, .xls, .docx 格式</p>
+                    <input type="file" id="fileInput" accept=".xlsx,.xls,.docx" onchange="handleFileUpload(event)">
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">选择文件</button>
+                    <div id="uploadPreview" class="upload-preview" style="display: none;"></div>
+                </div>
+
+                <hr style="margin: 30px 0; border: none; border-top: 1px solid #e8e8e8;">
+
+                <form id="examForm">
+                    <div class="form-group">
+                        <label>试卷标题</label>
+                        <input type="text" id="examTitle" required placeholder="请输入试卷标题">
+                    </div>
+                    <div class="form-group">
+                        <label>试卷描述</label>
+                        <textarea id="examDescription" placeholder="请输入试卷描述（可选）"></textarea>
+                    </div>
+                    <div id="questionsContainer"></div>
+                    <button type="button" class="btn btn-primary" onclick="addQuestion()">+ 添加题目</button>
+                    <div style="margin-top: 20px;">
+                        <button type="submit" class="btn btn-success">保存试卷</button>
+                        <button type="button" class="btn btn-secondary" onclick="loadPreviewToForm()">使用上传的文件</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="examDetailView" class="exam-view">
+            <div class="card">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                    <h2 id="examDetailTitle"></h2>
+                    <div>
+                        <button class="btn btn-secondary" onclick="copyExamLink()" style="margin-right: 10px;">📋 复制链接</button>
+                        <button class="btn btn-primary" onclick="sendToWechat()">📤 发送到企业微信</button>
+                    </div>
+                </div>
+                <div id="examDetailContent"></div>
+                <div class="link-display" id="examLinkDisplay" style="display: none; margin-top: 15px;"></div>
+                <div style="margin-top: 20px;">
+                    <button class="btn btn-danger" onclick="deleteExam()">删除试卷</button>
+                    <button class="btn" onclick="showView('list')" style="background: #ddd;">返回列表</button>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>答题</h2>
+                <form id="answerForm">
+                    <div class="form-group">
+                        <label>工号</label>
+                        <input type="text" id="employeeId" placeholder="请输入您的工号">
+                    </div>
+                    <div class="form-group">
+                        <label>姓名</label>
+                        <input type="text" id="studentName" required placeholder="请输入您的姓名">
+                    </div>
+                    <div id="answerQuestions"></div>
+                    <button type="submit" class="btn btn-success" style="margin-top: 20px;">提交答案</button>
+                </form>
+            </div>
+
+            <div class="card">
+                <h2>提交记录</h2>
+                <div id="submissionsList"></div>
+            </div>
+        </div>
+
+        <div id="resultView" class="exam-view">
+            <div class="result-card">
+                <h2>答题结果</h2>
+                <div class="score" id="resultScore">0</div>
+                <p id="resultMessage"></p>
+            </div>
+            <div class="card">
+                <div id="resultDetails"></div>
+                <button class="btn btn-primary" onclick="showView('list')" style="margin-top: 20px;">返回试卷列表</button>
+            </div>
+        </div>
+
+        <div id="webhooksView" class="exam-view">
+            <div class="card">
+                <h2>企业微信机器人配置</h2>
+                <p style="color: #666; margin-bottom: 20px;">添加企业微信机器人Webhook地址，方便发送试卷</p>
+
+                <div class="form-group">
+                    <label>名称</label>
+                    <input type="text" id="webhookName" placeholder="给这个Webhook起个名字">
+                </div>
+                <div class="form-group">
+                    <label>Webhook地址</label>
+                    <input type="text" id="webhookUrl" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx">
+                </div>
+                <button class="btn btn-primary" onclick="addWebhook()">添加配置</button>
+
+                <div id="webhooksList" style="margin-top: 30px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="wechatModal" class="modal">
+        <div class="modal-content">
+            <h3>发送到企业微信</h3>
+            <div class="form-group">
+                <label>选择已保存的配置</label>
+                <select id="wechatWebhookSelect" style="width: 100%; padding: 10px; border: 1px solid #ddd; border-radius: 4px;">
+                    <option value="">请选择已保存的配置</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>或手动输入Webhook地址</label>
+                <input type="text" id="wechatWebhookManual" placeholder="https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxx">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeWechatModal()" style="background: #ddd;">取消</button>
+                <button class="btn btn-primary" onclick="confirmSendWechat()">发送</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentExamId = null;
+        let currentSubmission = null;
+        let questions = [];
+        let uploadedQuestions = [];
+
+        async function loadExams() {
+            try {
+                const response = await fetch('/exam/api/exams');
+                const exams = await response.json();
+                displayExams(exams);
+            } catch (error) {
+                console.error('加载试卷失败:', error);
+            }
+        }
+
+        function displayExams(exams) {
+            const container = document.getElementById('examList');
+            if (exams.length === 0) {
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <h3>暂无试卷</h3>
+                        <p>点击上方"创建试卷"开始出题，或上传文件导入</p>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = exams.map(exam => `
+                <div class="exam-item">
+                    <h3>${exam.title}</h3>
+                    <p>${exam.description || '暂无描述'}</p>
+                    <div class="meta">
+                        <span>${exam.questions.length} 题</span>
+                        <span>${new Date(exam.created_at).toLocaleDateString()}</span>
+                    </div>
+                    <div class="exam-actions">
+                        <button class="btn btn-primary" onclick="viewExam(${exam.id})">查看</button>
+                        <button class="btn" style="background: #1890ff; color: white;" onclick="editExam(${exam.id})">编辑</button>
+                        <button class="btn btn-danger" onclick="deleteExam(${exam.id})">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function showView(view) {
+            document.querySelectorAll('.exam-view').forEach(v => v.classList.remove('active'));
+            document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+
+            if (view === 'list') {
+                document.getElementById('listView').classList.add('active');
+                document.querySelector('.nav button:first-child').classList.add('active');
+                loadExams();
+            } else if (view === 'create') {
+                document.getElementById('createView').classList.add('active');
+                document.querySelector('.nav button:nth-child(2)').classList.add('active');
+                resetForm();
+            } else if (view === 'webhooks') {
+                document.getElementById('webhooksView').classList.add('active');
+                document.querySelector('.nav button:nth-child(3)').classList.add('active');
+                loadWebhooks();
+            }
+        }
+
+        function resetForm() {
+            document.getElementById('examForm').reset();
+            document.getElementById('questionsContainer').innerHTML = '';
+            document.getElementById('uploadPreview').style.display = 'none';
+            questions = [];
+            uploadedQuestions = [];
+            currentExamId = null;
+        }
+
+        async function handleFileUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('/exam/api/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (response.ok) {
+                    uploadedQuestions = result.questions;
+                    displayUploadPreview(result);
+                } else {
+                    alert('上传失败: ' + result.error);
+                }
+            } catch (error) {
+                console.error('上传失败:', error);
+                alert('上传失败，请重试');
+            }
+        }
+
+        function displayUploadPreview(result) {
+            const preview = document.getElementById('uploadPreview');
+            preview.style.display = 'block';
+
+            const typeLabels = {
+                'single': '单选题',
+                'multiple': '多选题',
+                'truefalse': '判断题',
+                'fillblank': '填空题'
+            };
+
+            preview.innerHTML = `
+                <h4>📋 解析结果 (${result.filename})</h4>
+                <p style="color: #666; margin: 10px 0;">共 ${result.questions.length} 道题目</p>
+                ${result.questions.map((q, i) => `
+                    <div class="preview-question">
+                        <strong>${i + 1}. ${q.question_text.substring(0, 50)}${q.question_text.length > 50 ? '...' : ''}</strong>
+                        <span class="type-badge type-${q.question_type}">${typeLabels[q.question_type] || q.question_type}</span>
+                        <div style="font-size: 12px; color: #999; margin-top: 5px;">
+                            答案: ${q.correct_answer || '未设置'} | 分值: ${q.score}
+                        </div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        function loadPreviewToForm() {
+            if (uploadedQuestions.length === 0) {
+                alert('请先上传文件');
+                return;
+            }
+
+            document.getElementById('examTitle').value = '导入试卷 - ' + new Date().toLocaleDateString();
+
+            document.getElementById('questionsContainer').innerHTML = '';
+            questions = [];
+
+            uploadedQuestions.forEach((q, i) => {
+                questions.push(q);
+                const container = document.getElementById('questionsContainer');
+                const questionHtml = createQuestionHtml(i, q);
+                container.insertAdjacentHTML('beforeend', questionHtml);
+            });
+
+            alert('已加载 ' + questions.length + ' 道题目，请检查并编辑后保存');
+        }
+
+        function displayQuestions() {
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            questions.forEach((q, i) => {
+                const questionHtml = createQuestionHtml(i, q);
+                container.insertAdjacentHTML('beforeend', questionHtml);
+            });
+        }
+
+        function addQuestion() {
+            const container = document.getElementById('questionsContainer');
+            const questionIndex = questions.length;
+            questions.push({
+                question_text: '',
+                question_type: 'single',
+                options: ['', '', '', ''],
+                correct_answer: '',
+                score: 10
+            });
+
+            const questionHtml = createQuestionHtml(questionIndex, questions[questionIndex]);
+            container.insertAdjacentHTML('beforeend', questionHtml);
+        }
+
+        function createQuestionHtml(index, q) {
+            let optionsHtml = '';
+
+            if (q.question_type === 'truefalse') {
+                optionsHtml = `
+                    <div class="option-item">
+                        <input type="radio" name="correct-${index}" value="TRUE" ${q.correct_answer === 'TRUE' ? 'checked' : ''}>
+                        <span>正确</span>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="correct-${index}" value="FALSE" ${q.correct_answer === 'FALSE' ? 'checked' : ''}>
+                        <span>错误</span>
+                    </div>
+                `;
+            } else if (q.question_type === 'fillblank') {
+                optionsHtml = `
+                    <div class="form-group">
+                        <label>正确答案</label>
+                        <input type="text" id="q-answer-${index}" value="${q.correct_answer || ''}" placeholder="请输入正确答案">
+                    </div>
+                `;
+            } else if (q.question_type === 'multiple') {
+                optionsHtml = `
+                    <p style="color: #999; margin-bottom: 10px;">多选题正确答案，多选用逗号分隔，如：A,B</p>
+                    <p style="color: #666; margin-bottom: 10px;">请勾选正确答案：</p>
+                    ${['A', 'B', 'C', 'D'].map((opt, i) => `
+                        <div class="option-item">
+                            <input type="checkbox" name="correct-${index}" value="${opt}" ${(q.correct_answer || '').toUpperCase().includes(opt) ? 'checked' : ''}>
+                            <span>${opt}.</span>
+                            <input type="text" id="q-opt-${opt}-${index}" value="${q.options[i] || ''}" placeholder="选项${opt}">
+                        </div>
+                    `).join('')}
+                `;
+            } else {
+                optionsHtml = `
+                    <p style="color: #666; margin-bottom: 10px;">请选择正确答案：</p>
+                    ${['A', 'B', 'C', 'D'].map((opt, i) => `
+                        <div class="option-item">
+                            <input type="radio" name="correct-${index}" value="${opt}" ${q.correct_answer === opt ? 'checked' : ''}>
+                            <span>${opt}.</span>
+                            <input type="text" id="q-opt-${opt}-${index}" value="${q.options[i] || ''}" placeholder="选项${opt}">
+                        </div>
+                    `).join('')}
+                `;
+            }
+
+            return `
+                <div class="question-item" id="question-${index}">
+                    <div class="question-header">
+                        <span>题目 ${index + 1}</span>
+                        <button type="button" class="btn btn-danger" onclick="removeQuestion(${index})">删除</button>
+                    </div>
+                    <div class="form-group">
+                        <label>题目内容</label>
+                        <input type="text" id="q-text-${index}" value="${q.question_text || ''}" placeholder="请输入题目内容">
+                    </div>
+                    <div class="form-group">
+                        <label>题目类型</label>
+                        <select id="q-type-${index}" class="question-type-select" onchange="updateQuestionOptions(${index})">
+                            <option value="single" ${q.question_type === 'single' ? 'selected' : ''}>单选题</option>
+                            <option value="multiple" ${q.question_type === 'multiple' ? 'selected' : ''}>多选题</option>
+                            <option value="truefalse" ${q.question_type === 'truefalse' ? 'selected' : ''}>判断题</option>
+                            <option value="fillblank" ${q.question_type === 'fillblank' ? 'selected' : ''}>填空题</option>
+                            <option value="essay" ${q.question_type === 'essay' ? 'selected' : ''}>问答题</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>分值</label>
+                        <input type="number" id="q-score-${index}" value="${q.score || 10}" min="1" style="width: 100px;">
+                    </div>
+                    <div class="options-container" id="q-options-${index}">
+                        ${optionsHtml}
+                    </div>
+                </div>
+            `;
+        }
+
+        function updateQuestionOptions(index) {
+            const type = document.getElementById(`q-type-${index}`).value;
+            const optionsContainer = document.getElementById(`q-options-${index}`);
+            const currentScore = document.getElementById(`q-score-${index}`).value || 10;
+            const currentText = document.getElementById(`q-text-${index}`).value || '';
+
+            questions[index] = {
+                question_text: currentText,
+                question_type: type,
+                options: ['', '', '', ''],
+                correct_answer: '',
+                score: parseInt(currentScore)
+            };
+
+            optionsContainer.innerHTML = '';
+
+            if (type === 'truefalse') {
+                optionsContainer.innerHTML = `
+                    <div class="option-item">
+                        <input type="radio" name="correct-${index}" value="TRUE">
+                        <span>正确</span>
+                    </div>
+                    <div class="option-item">
+                        <input type="radio" name="correct-${index}" value="FALSE">
+                        <span>错误</span>
+                    </div>
+                `;
+            } else if (type === 'fillblank') {
+                optionsContainer.innerHTML = `
+                    <div class="form-group">
+                        <label>正确答案</label>
+                        <input type="text" id="q-answer-${index}" placeholder="请输入正确答案">
+                    </div>
+                `;
+            } else if (type === 'essay') {
+                optionsContainer.innerHTML = `
+                    <div class="form-group">
+                        <label>参考答案（用于自动评分）</label>
+                        <textarea id="q-answer-${index}" placeholder="请输入参考答案，系统将根据关键词匹配评分" style="height: 100px;"></textarea>
+                        <p style="color: #1890ff; font-size: 12px; margin-top: 5px;">
+                            <strong>评分规则：</strong><br>
+                            1. 参考答案可用 <code style="background:#f0f0f0;padding:2px 4px;">|</code> 分隔多个关键词<br>
+                            2. 系统计算用户答案中包含的关键词数量<br>
+                            3. 得分 = 题目分值 × (匹配关键词数 / 总关键词数)<br>
+                            4. 未匹配到关键词得 0 分<br>
+                            <strong>示例：</strong>参考答案填写 <code style="background:#f0f0f0;padding:2px 4px;">创新|技术|发展</code>，用户答案包含"创新"和"发展"得 10×(2/3)=6 分
+                        </p>
+                    </div>
+                `;
+            } else if (type === 'multiple') {
+                optionsContainer.innerHTML = `
+                    <p style="color: #999; margin-bottom: 10px;">多选题正确答案，多选用逗号分隔，如：A,B</p>
+                    <p style="color: #666; margin-bottom: 10px;">请勾选正确答案：</p>
+                    ${['A', 'B', 'C', 'D'].map((opt) => `
+                        <div class="option-item">
+                            <input type="checkbox" name="correct-${index}" value="${opt}">
+                            <span>${opt}.</span>
+                            <input type="text" id="q-opt-${opt}-${index}" placeholder="选项${opt}">
+                        </div>
+                    `).join('')}
+                `;
+            } else {
+                optionsContainer.innerHTML = `
+                    <p style="color: #666; margin-bottom: 10px;">请选择正确答案：</p>
+                    ${['A', 'B', 'C', 'D'].map((opt) => `
+                        <div class="option-item">
+                            <input type="radio" name="correct-${index}" value="${opt}">
+                            <span>${opt}.</span>
+                            <input type="text" id="q-opt-${opt}-${index}" placeholder="选项${opt}">
+                        </div>
+                    `).join('')}
+                `;
+            }
+        }
+
+        function removeQuestion(index) {
+            questions.splice(index, 1);
+            const container = document.getElementById('questionsContainer');
+            container.innerHTML = '';
+            questions.forEach((q, i) => {
+                const questionHtml = createQuestionHtml(i, q);
+                container.insertAdjacentHTML('beforeend', questionHtml);
+            });
+        }
+
+        document.getElementById('examForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const examData = {
+                title: document.getElementById('examTitle').value,
+                description: document.getElementById('examDescription').value,
+                questions: []
+            };
+
+            for (let i = 0; i < questions.length; i++) {
+                const type = document.getElementById(`q-type-${i}`).value;
+                let correctAnswer = '';
+
+                if (type === 'multiple') {
+                    const checked = document.querySelectorAll(`input[name="correct-${i}"]:checked`);
+                    correctAnswer = Array.from(checked).map(c => c.value).join(',');
+                } else if (type === 'fillblank' || type === 'essay') {
+                    correctAnswer = document.getElementById(`q-answer-${i}`).value.trim();
+                } else if (type === 'truefalse') {
+                    const selected = document.querySelector(`input[name="correct-${i}"]:checked`);
+                    correctAnswer = selected ? selected.value : '';
+                } else {
+                    const selected = document.querySelector(`input[name="correct-${i}"]:checked`);
+                    correctAnswer = selected ? selected.value : '';
+                }
+
+                const options = [];
+                if (type !== 'truefalse' && type !== 'fillblank' && type !== 'essay') {
+                    options.push(document.getElementById(`q-opt-A-${i}`).value || '');
+                    options.push(document.getElementById(`q-opt-B-${i}`).value || '');
+                    options.push(document.getElementById(`q-opt-C-${i}`).value || '');
+                    options.push(document.getElementById(`q-opt-D-${i}`).value || '');
+                }
+
+                examData.questions.push({
+                    question_text: document.getElementById(`q-text-${i}`).value,
+                    question_type: type,
+                    options: options,
+                    correct_answer: correctAnswer,
+                    score: parseInt(document.getElementById(`q-score-${i}`).value) || 10
+                });
+            }
+
+            if (examData.questions.length === 0) {
+                alert('请至少添加一道题目');
+                return;
+            }
+
+            try {
+                const isEditing = questions.length > 0 && questions[0].id;
+                const url = isEditing ? `/exam/api/exams/${currentExamId}` : '/exam/api/exams';
+                const method = isEditing ? 'PUT' : 'POST';
+
+                const response = await fetch(url, {
+                    method: method,
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(examData)
+                });
+
+                if (response.ok) {
+                    alert(isEditing ? '试卷更新成功！' : '试卷创建成功！');
+                    showView('list');
+                }
+            } catch (error) {
+                console.error('保存试卷失败:', error);
+                alert('保存试卷失败，请重试');
+            }
+        });
+
+        async function viewExam(examId) {
+            currentExamId = examId;
+            try {
+                const response = await fetch(`/exam/api/exams/${examId}`);
+                const exam = await response.json();
+
+                document.getElementById('examDetailTitle').textContent = exam.title;
+                document.getElementById('examDetailContent').innerHTML = `
+                    <p style="color: #666; margin-bottom: 20px;">${exam.description || '暂无描述'}</p>
+                    <p style="color: #999;">共 ${exam.questions.length} 题，总分 ${exam.questions.reduce((sum, q) => sum + q.score, 0)} 分</p>
+                `;
+
+                displayAnswerQuestions(exam.questions);
+                loadSubmissions(examId);
+
+                document.querySelectorAll('.exam-view').forEach(v => v.classList.remove('active'));
+                document.getElementById('examDetailView').classList.add('active');
+            } catch (error) {
+                console.error('加载试卷失败:', error);
+            }
+        }
+
+        async function editExam(examId) {
+            try {
+                const response = await fetch(`/exam/api/exams/${examId}`);
+                const exam = await response.json();
+
+                currentExamId = examId;
+                questions = exam.questions.map(q => ({
+                    id: q.id,
+                    question_text: q.question_text,
+                    question_type: q.question_type,
+                    options: q.options || [],
+                    correct_answer: q.correct_answer,
+                    score: q.score
+                }));
+
+                document.getElementById('examTitle').value = exam.title;
+                document.getElementById('examDescription').value = exam.description || '';
+                displayQuestions();
+
+                document.querySelectorAll('.exam-view').forEach(v => v.classList.remove('active'));
+                document.getElementById('createView').classList.add('active');
+                document.querySelectorAll('.nav button').forEach(b => b.classList.remove('active'));
+                document.querySelector('.nav button:nth-child(2)').classList.add('active');
+            } catch (error) {
+                console.error('加载试卷失败:', error);
+                alert('加载失败');
+            }
+        }
+
+        function displayAnswerQuestions(questions) {
+            const container = document.getElementById('answerQuestions');
+            const typeLabels = {
+                'single': '',
+                'multiple': ' [多选]',
+                'truefalse': '',
+                'fillblank': ' [填空]',
+                'essay': ' [问答]'
+            };
+
+            container.innerHTML = questions.map((q, i) => {
+                if (q.question_type === 'truefalse') {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)</h4>
+                            <label class="answer-option">
+                                <input type="radio" name="answer-${i}" value="TRUE" onclick="selectOption(this)"> <span class="tf-symbol">√</span> 正确
+                            </label>
+                            <label class="answer-option">
+                                <input type="radio" name="answer-${i}" value="FALSE" onclick="selectOption(this)"> <span class="tf-symbol">×</span> 错误
+                            </label>
+                        </div>
+                    `;
+                } else if (q.question_type === 'fillblank') {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)${typeLabels[q.question_type]}</h4>
+                            <input type="text" class="fillblank-input" name="answer-${i}" placeholder="请输入答案">
+                        </div>
+                    `;
+                } else if (q.question_type === 'essay') {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)${typeLabels[q.question_type]}</h4>
+                            <textarea class="essay-input" name="answer-${i}" placeholder="请在此输入答案" style="width: 100%; height: 150px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                        </div>
+                    `;
+                } else if (q.question_type === 'multiple') {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)${typeLabels[q.question_type]}</h4>
+                            ${q.options.map((opt, j) => `
+                                <label class="answer-option">
+                                    <input type="checkbox" name="answer-${i}" value="${String.fromCharCode(65 + j)}" onclick="toggleMultiple(this)">
+                                    ${String.fromCharCode(65 + j)}. ${opt}
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)</h4>
+                            ${q.options.map((opt, j) => `
+                                <label class="answer-option">
+                                    <input type="radio" name="answer-${i}" value="${String.fromCharCode(65 + j)}" onclick="selectOption(this)">
+                                    ${String.fromCharCode(65 + j)}. ${opt}
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
+
+        function selectOption(el) {
+            const label = el.tagName === 'INPUT' ? el.closest('label') : el;
+            const container = label.closest('.question-display');
+            container.querySelectorAll('.answer-option').forEach(opt => opt.classList.remove('selected'));
+            label.classList.add('selected');
+        }
+
+        function toggleMultiple(el) {
+            const label = el.tagName === 'INPUT' ? el.closest('label') : el;
+            label.classList.toggle('selected');
+        }
+
+        function copyExamLink() {
+            if (!currentExamId) {
+                alert('请先选择一个试卷');
+                return;
+            }
+            
+            const examLink = `${window.location.origin}/exam/exam/${currentExamId}`;
+            
+            if (!navigator.clipboard) {
+                alert('复制失败，请手动复制: ' + examLink);
+                return;
+            }
+            
+            navigator.clipboard.writeText(examLink).then(() => {
+                const display = document.getElementById('examLinkDisplay');
+                if (display) {
+                    display.textContent = `链接已复制: ${examLink}`;
+                    display.style.display = 'block';
+                    setTimeout(() => { display.style.display = 'none'; }, 3000);
+                }
+            }).catch(err => {
+                console.error('复制失败:', err);
+                alert('复制失败，请手动复制: ' + examLink);
+            });
+        }
+
+        document.getElementById('answerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const answers = [];
+            const questionDisplays = document.querySelectorAll('.question-display');
+
+            questionDisplays.forEach((q, i) => {
+                const inputs = q.querySelectorAll('input');
+                const textInput = q.querySelector('input[type="text"]');
+                const textareaInput = q.querySelector('textarea');
+
+                if (textareaInput) {
+                    answers.push(textareaInput.value.trim());
+                } else if (textInput) {
+                    answers.push(textInput.value.trim());
+                } else if (inputs[0]?.type === 'checkbox') {
+                    const checked = Array.from(inputs).filter(inp => inp.checked).map(inp => inp.value);
+                    answers.push(checked.join(','));
+                } else {
+                    const checked = Array.from(inputs).find(inp => inp.checked);
+                    answers.push(checked ? checked.value : '');
+                }
+            });
+
+            try {
+                const response = await fetch('/exam/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        exam_id: currentExamId,
+                        student_name: document.getElementById('studentName').value,
+                        employee_id: document.getElementById('employeeId').value,
+                        answers: answers
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || '提交失败');
+                }
+
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                console.error('提交答案失败:', error);
+                alert('提交失败: ' + error.message);
+            }
+        });
+
+        async function showResult(submission) {
+            const examRes = await fetch(`/exam/api/exams/${currentExamId}`);
+            const exam = await examRes.json();
+            const totalScore = exam.questions.reduce((sum, q) => sum + q.score, 0);
+
+            document.getElementById('resultScore').textContent = `${submission.score} / ${totalScore}`;
+            document.getElementById('resultMessage').textContent =
+                submission.score >= totalScore * 0.6 ? '🎉 合格！' : '❌ 不合格，继续加油！';
+
+            const typeLabels = {
+                'single': '单选题',
+                'multiple': '多选题',
+                'truefalse': '判断题',
+                'fillblank': '填空题'
+            };
+
+            document.getElementById('resultDetails').innerHTML = exam.questions.map((q, i) => {
+                const userAnswer = submission.answers[i] || '';
+                let isCorrect = false;
+
+                if (q.question_type === 'multiple') {
+                    const userSet = new Set(userAnswer.toUpperCase().split(',').filter(Boolean));
+                    const correctSet = new Set(q.correct_answer.toUpperCase().split(',').filter(Boolean));
+                    isCorrect = userSet.size === correctSet.size && [...userSet].every(a => correctSet.has(a));
+                } else if (q.question_type === 'fillblank') {
+                    isCorrect = userAnswer.toUpperCase().trim() === q.correct_answer.toUpperCase().trim();
+                } else {
+                    isCorrect = userAnswer.toUpperCase().trim() === q.correct_answer.toUpperCase().trim();
+                }
+
+                let optionsHtml = '';
+                if (q.question_type === 'single' || q.question_type === 'multiple') {
+                    optionsHtml = `
+                        <div class="question-options">
+                            ${q.options.map((opt, j) => {
+                                const optionLetter = String.fromCharCode(65 + j);
+                                const isUserAnswer = userAnswer.toUpperCase().includes(optionLetter);
+                                const isCorrectAnswer = q.correct_answer.toUpperCase().includes(optionLetter);
+                                let optionClass = '';
+                                if (isCorrectAnswer && isUserAnswer) {
+                                    optionClass = 'option-correct-user';
+                                } else if (isCorrectAnswer) {
+                                    optionClass = 'option-correct';
+                                } else if (isUserAnswer) {
+                                    optionClass = 'option-user';
+                                }
+                                return `
+                                    <div class="option-item ${optionClass}">
+                                        <span class="option-letter">${optionLetter}.</span>
+                                        <span class="option-text">${opt}</span>
+                                        ${isCorrectAnswer ? '<span class="option-mark">✓</span>' : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="question-display" style="border-left-color: ${isCorrect ? '#52c41a' : '#ff4d4f'}">
+                        <h4>${i + 1}. ${q.question_text} <span class="type-badge type-${q.question_type}">${typeLabels[q.question_type]}</span></h4>
+                        ${optionsHtml}
+                        <p>你的答案: ${userAnswer || '未作答'} | 正确答案: ${q.correct_answer}</p>
+                        <p style="color: ${isCorrect ? '#52c41a' : '#ff4d4f'}">
+                            ${isCorrect ? '✓ 正确' : '✗ 错误'} (${q.score}分)
+                        </p>
+                    </div>
+                `;
+            }).join('');
+
+            document.querySelectorAll('.exam-view').forEach(v => v.classList.remove('active'));
+            document.getElementById('resultView').classList.add('active');
+        }
+
+        async function loadSubmissions(examId) {
+            try {
+                const response = await fetch(`/exam/api/submissions/${examId}`);
+                const submissions = await response.json();
+
+                const container = document.getElementById('submissionsList');
+                if (submissions.length === 0) {
+                    container.innerHTML = '<p style="color: #999; text-align: center;">暂无提交记录</p>';
+                } else {
+                    container.innerHTML = submissions.map(s => `
+                        <div class="submission-item">
+                            <div style="cursor: pointer;" onclick="viewSubmissionResult(${s.id})">
+                                <strong>${s.employee_id || '(无工号)'} - ${s.student_name}</strong>
+                                <span style="margin-left: 10px; color: #666;">得分: ${s.score}</span>
+                                <span style="margin-left: 10px;">
+                                    <span class="badge badge-success">已批改</span>
+                                    <span style="margin-left: 10px; color: #999; font-size: 12px;">
+                                        ${new Date(s.submitted_at).toLocaleString()}
+                                    </span>
+                                </span>
+                            </div>
+                            <div>
+                                <button class="btn" style="background: #ff4d4f; color: white; padding: 4px 10px; font-size: 12px;" onclick="deleteSubmission(${s.id}, ${examId})">删除</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载提交记录失败:', error);
+            }
+        }
+
+        async function viewSubmissionResult(submissionId) {
+            try {
+                const response = await fetch(`/exam/api/submission/${submissionId}`);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || '加载失败');
+                }
+                const submission = await response.json();
+                currentSubmission = submission;
+
+                if (!submission.questions || submission.questions.length === 0) {
+                    alert('无法加载答题详情（试卷可能已被删除）');
+                    return;
+                }
+
+                const totalScore = submission.questions.reduce((sum, q) => sum + q.score, 0);
+                const passScore = totalScore * 0.6;
+
+                const typeLabels = {
+                    'single': '单选题',
+                    'multiple': '多选题',
+                    'truefalse': '判断题',
+                    'fillblank': '填空题'
+                };
+
+                let resultHTML = `
+                    <div class="result-card" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; border-radius: 8px; text-align: center; margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 10px; font-size: 18px;">${submission.exam_title}</h3>
+                        <h2 style="margin-bottom: 15px;">${submission.employee_id || '(无工号)'} - ${submission.student_name} 的答题结果</h2>
+                        <div style="font-size: 48px; font-weight: bold; margin: 20px 0;">${submission.score} / ${totalScore}</div>
+                        <div style="font-size: 20px; margin-bottom: 20px;">${submission.score >= passScore ? '🎉 恭喜合格！' : '❌ 不合格，继续加油！'}</div>
+                    </div>
+                    <div style="margin-bottom: 20px;">
+                        <h3 style="margin-bottom: 15px;">答案详情</h3>
+                `;
+
+                submission.questions.forEach((q, i) => {
+                    const userAnswer = submission.answers[i] || '';
+                    let isCorrect = false;
+
+                    if (q.question_type === 'multiple') {
+                        const userSet = new Set(userAnswer.toUpperCase().split(',').filter(Boolean));
+                        const correctSet = new Set(q.correct_answer.toUpperCase().split(',').filter(Boolean));
+                        isCorrect = userSet.size === correctSet.size && [...userSet].every(a => correctSet.has(a));
+                    } else if (q.question_type === 'fillblank') {
+                        isCorrect = userAnswer.toUpperCase().trim() === q.correct_answer.toUpperCase().trim();
+                    } else {
+                        isCorrect = userAnswer.toUpperCase().trim() === q.correct_answer.toUpperCase().trim();
+                    }
+
+                    let optionsHtml = '';
+                    if (q.question_type === 'single' || q.question_type === 'multiple') {
+                        optionsHtml = `
+                            <div class="question-options">
+                                ${q.options.map((opt, j) => {
+                                    const optionLetter = String.fromCharCode(65 + j);
+                                    const isUserAnswer = userAnswer.toUpperCase().includes(optionLetter);
+                                    const isCorrectAnswer = q.correct_answer.toUpperCase().includes(optionLetter);
+                                    let optionClass = '';
+                                    if (isCorrectAnswer && isUserAnswer) {
+                                        optionClass = 'option-correct-user';
+                                    } else if (isCorrectAnswer) {
+                                        optionClass = 'option-correct';
+                                    } else if (isUserAnswer) {
+                                        optionClass = 'option-user';
+                                    }
+                                    return `
+                                        <div class="option-item ${optionClass}">
+                                            <span class="option-letter">${optionLetter}.</span>
+                                            <span class="option-text">${opt}</span>
+                                            ${isCorrectAnswer ? '<span class="option-mark">✓</span>' : ''}
+                                        </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        `;
+                    }
+
+                    resultHTML += `
+                        <div style="padding: 15px; border-bottom: 1px solid #e8e8e8;">
+                            <h5 style="color: ${isCorrect ? '#52c41a' : '#ff4d4f'}; margin-bottom: 10px;">
+                                ${i + 1}. ${q.question_text}
+                                <span class="type-badge type-${q.question_type}">${typeLabels[q.question_type]}</span>
+                            </h5>
+                            ${optionsHtml}
+                            <p style="color: #666; font-size: 14px;">你的答案: ${userAnswer || '(未作答)'}</p>
+                            <p style="color: #52c41a; font-size: 14px;">正确答案: ${q.correct_answer}</p>
+                            <p style="color: ${isCorrect ? '#52c41a' : '#ff4d4f'}; margin-top: 5px; font-weight: bold;">
+                                ${isCorrect ? '✓ 正确' : '✗ 错误'} (${q.score}分)
+                            </p>
+                        </div>
+                    `;
+                });
+
+                resultHTML += '</div><div style="display: flex; gap: 10px;"><button class="btn btn-success" onclick="downloadResult()" style="flex: 1;">下载结果</button><button class="btn btn-primary" onclick="closeResultModal()" style="flex: 1;">关闭</button></div>';
+
+                document.getElementById('resultDetails').innerHTML = resultHTML;
+                document.getElementById('resultView').classList.add('active');
+                document.getElementById('examDetailView').classList.remove('active');
+            } catch (error) {
+                console.error('加载答题结果失败:', error);
+                alert('加载失败: ' + error.message);
+            }
+        }
+
+        function closeResultModal() {
+            document.getElementById('resultView').classList.remove('active');
+            document.getElementById('examDetailView').classList.add('active');
+        }
+
+        async function downloadResult() {
+            try {
+                if (!currentSubmission) {
+                    alert('无法获取答题信息');
+                    return;
+                }
+
+                const element = document.getElementById('resultView');
+                if (!element) {
+                    alert('无法找到结果页面');
+                    return;
+                }
+
+                // 生成文件名：工号+姓名+试卷名称+日期时间
+                const employeeId = currentSubmission.employee_id || '';
+                const studentName = currentSubmission.student_name || '';
+                const examTitle = currentSubmission.exam_title || '未知试卷';
+                const now = new Date();
+                const dateStr = now.getFullYear() + '-' +
+                    String(now.getMonth() + 1).padStart(2, '0') + '-' +
+                    String(now.getDate()).padStart(2, '0') + '_' +
+                    String(now.getHours()).padStart(2, '0') + '-' +
+                    String(now.getMinutes()).padStart(2, '0') + '-' +
+                    String(now.getSeconds()).padStart(2, '0');
+                const fileName = `${employeeId}_${studentName}_${examTitle}_${dateStr}.png`;
+
+                // 临时调整样式以确保所有内容都在截图中
+                const originalStyle = element.style.cssText;
+                element.style.cssText = 'width: 800px; max-width: 100%; margin: 0 auto; padding: 20px; background: #f0f0f0;';
+
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+
+                // 恢复原始样式
+                element.style.cssText = originalStyle;
+
+                const link = document.createElement('a');
+                link.download = fileName;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+            } catch (error) {
+                console.error('下载失败:', error);
+                alert('下载失败，请重试');
+            }
+        }
+
+        async function deleteSubmission(submissionId, examId) {
+            if (!confirm('确定要删除这条提交记录吗？')) return;
+
+            try {
+                await fetch(`/exam/api/submission/${submissionId}`, { method: 'DELETE' });
+                loadSubmissions(examId);
+            } catch (error) {
+                console.error('删除提交记录失败:', error);
+            }
+        }
+
+        async function loadWebhooks() {
+            try {
+                const response = await fetch('/exam/api/webhooks');
+                const webhooks = await response.json();
+
+                const container = document.getElementById('webhooksList');
+                if (webhooks.length === 0) {
+                    container.innerHTML = '<p style="color: #999; text-align: center;">暂无配置</p>';
+                } else {
+                    container.innerHTML = '<h4 style="margin-bottom: 15px;">已保存的配置</h4>' + webhooks.map(w => `
+                        <div class="submission-item">
+                            <div>
+                                <strong>${w.name}</strong>
+                                <span style="margin-left: 10px; color: #666; font-size: 12px;">${w.webhook_url}</span>
+                            </div>
+                            <div>
+                                <button class="btn" style="background: #ff4d4f; color: white; margin-right: 10px; padding: 6px 12px; font-size: 12px;" onclick="deleteWebhook(${w.id})">删除</button>
+                            </div>
+                        </div>
+                    `).join('');
+                }
+            } catch (error) {
+                console.error('加载Webhook配置失败:', error);
+            }
+        }
+
+        async function addWebhook() {
+            const name = document.getElementById('webhookName').value.trim();
+            const url = document.getElementById('webhookUrl').value.trim();
+
+            if (!url) {
+                alert('请输入Webhook地址');
+                return;
+            }
+
+            try {
+                const response = await fetch('/exam/api/webhooks', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: name || '未命名', webhook_url: url })
+                });
+
+                if (response.ok) {
+                    document.getElementById('webhookName').value = '';
+                    document.getElementById('webhookUrl').value = '';
+                    loadWebhooks();
+                }
+            } catch (error) {
+                console.error('添加Webhook失败:', error);
+            }
+        }
+
+        async function deleteWebhook(id) {
+            if (!confirm('确定要删除这个配置吗？')) return;
+
+            try {
+                await fetch(`/exam/api/webhooks/${id}`, { method: 'DELETE' });
+                loadWebhooks();
+            } catch (error) {
+                console.error('删除Webhook失败:', error);
+            }
+        }
+
+        async function deleteExam(examId) {
+            const id = examId || currentExamId;
+            if (!confirm('确定要删除这份试卷吗？')) return;
+
+            try {
+                await fetch(`/exam/api/exams/${id}`, { method: 'DELETE' });
+                alert('试卷已删除');
+                showView('list');
+            } catch (error) {
+                console.error('删除试卷失败:', error);
+            }
+        }
+
+        function sendToWechat() {
+            loadWebhooksForSend();
+            document.getElementById('wechatModal').classList.add('active');
+        }
+
+        async function loadWebhooksForSend() {
+            try {
+                const response = await fetch('/exam/api/webhooks');
+                const webhooks = await response.json();
+
+                const select = document.getElementById('wechatWebhookSelect');
+                const manualInput = document.getElementById('wechatWebhookManual');
+
+                if (webhooks.length === 0) {
+                    select.style.display = 'none';
+                    manualInput.style.display = 'block';
+                } else {
+                    select.style.display = 'block';
+                    manualInput.style.display = 'none';
+                    select.innerHTML = '<option value="">请选择已保存的配置</option>' +
+                        webhooks.map(w => `<option value="${w.webhook_url}">${w.name}</option>`).join('');
+                }
+            } catch (error) {
+                console.error('加载Webhook配置失败:', error);
+            }
+        }
+
+        function closeWechatModal() {
+            document.getElementById('wechatModal').classList.remove('active');
+        }
+
+        async function confirmSendWechat() {
+            const select = document.getElementById('wechatWebhookSelect');
+            const webhookUrl = select.style.display !== 'none' ?
+                select.value : document.getElementById('wechatWebhookManual').value;
+
+            if (!webhookUrl) {
+                alert('请填写企业微信机器人Webhook地址');
+                return;
+            }
+
+            try {
+                const response = await fetch('/exam/api/send-to-wechat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        exam_id: currentExamId,
+                        webhook_url: webhookUrl
+                    })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('试卷已成功发送到企业微信！');
+                    closeWechatModal();
+                } else {
+                    alert('发送失败: ' + result.error);
+                }
+            } catch (error) {
+                console.error('发送失败:', error);
+                alert('发送失败，请检查配置并重试');
+            }
+        }
+
+        const uploadArea = document.getElementById('uploadArea');
+        uploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#1890ff';
+            uploadArea.style.background = '#f0f5ff';
+        });
+        uploadArea.addEventListener('dragleave', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ddd';
+            uploadArea.style.background = 'white';
+        });
+        uploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadArea.style.borderColor = '#ddd';
+            uploadArea.style.background = 'white';
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('fileInput').files = files;
+                handleFileUpload({ target: { files: files } });
+            }
+        });
+
+        loadExams();
+    </script>
+</body>
+</html>

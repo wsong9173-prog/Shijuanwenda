@@ -1,0 +1,612 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>在线答题</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            background: #1890ff;
+            color: white;
+            padding: 20px 0;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            text-align: center;
+            font-size: 24px;
+        }
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .card h2 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 20px;
+        }
+        .exam-info {
+            background: #f0f5ff;
+            padding: 15px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .exam-info p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: #1890ff;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #40a9ff;
+        }
+        .btn-success {
+            background: #52c41a;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #73d13d;
+        }
+        .question-display {
+            background: #fafafa;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 4px;
+            border-left: 4px solid #1890ff;
+        }
+        .question-display h4 {
+            margin-bottom: 15px;
+            color: #333;
+            font-size: 16px;
+        }
+        .answer-option {
+            display: flex;
+            align-items: center;
+            padding: 12px 15px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .answer-option:hover {
+            border-color: #1890ff;
+            background: #e6f7ff;
+        }
+        .answer-option.selected {
+            border-color: #1890ff;
+            background: #bae7ff;
+        }
+        .answer-option input[type="radio"],
+        .answer-option input[type="checkbox"] {
+            margin-right: 10px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        .tf-symbol {
+            font-size: 20px;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+        .answer-option.selected .tf-symbol {
+            color: #1890ff;
+        }
+        .fillblank-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .result-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 8px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .result-card .score {
+            font-size: 64px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+        .result-card .pass-status {
+            font-size: 24px;
+            margin-bottom: 20px;
+        }
+        .result-detail {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .result-question {
+            padding: 15px;
+            border-bottom: 1px solid #e8e8e8;
+        }
+        .result-question:last-child {
+            border-bottom: none;
+        }
+        .result-question h5 {
+            margin-bottom: 10px;
+            color: #333;
+        }
+        .result-question .your-answer {
+            color: #666;
+            font-size: 14px;
+        }
+        .result-question .correct-answer {
+            color: #52c41a;
+            font-size: 14px;
+        }
+        .result-question .wrong {
+            color: #ff4d4f;
+        }
+        .question-options {
+            margin: 10px 0;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 4px;
+        }
+        .option-item {
+            display: flex;
+            align-items: center;
+            padding: 5px 10px;
+            margin: 2px 0;
+        }
+        .option-letter {
+            font-weight: bold;
+            margin-right: 12px;
+            min-width: 25px;
+            text-align: right;
+        }
+        .option-text {
+            flex: 1;
+        }
+        .option-mark {
+            color: #52c41a;
+            font-weight: bold;
+            margin-left: 15px;
+        }
+        .option-correct {
+            background: #f6ffed;
+            border-left: 3px solid #52c41a;
+            padding: 5px 10px;
+            margin: 2px 0;
+        }
+        .option-user {
+            background: #fff7e6;
+            border-left: 3px solid #fa8c16;
+            padding: 5px 10px;
+            margin: 2px 0;
+        }
+        .option-correct-user {
+            background: #f6ffed;
+            border-left: 3px solid #52c41a;
+            padding: 5px 10px;
+            margin: 2px 0;
+        }
+        .type-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            margin-left: 10px;
+        }
+        .type-single { background: #e6f7ff; color: #1890ff; }
+        .type-multiple { background: #fff7e6; color: #fa8c16; }
+        .type-truefalse { background: #f6ffed; color: #52c41a; }
+        .type-fillblank { background: #fff0f0; color: #ff4d4f; }
+        .loading {
+            text-align: center;
+            padding: 60px;
+            color: #999;
+        }
+        .error {
+            text-align: center;
+            padding: 60px;
+            color: #ff4d4f;
+        }
+        .copy-link-btn {
+            background: #666;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-top: 10px;
+        }
+        .copy-link-btn:hover {
+            background: #888;
+        }
+        .link-display {
+            background: #f5f5f5;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            word-break: break-all;
+            margin-top: 10px;
+        }
+        .back-link {
+            display: inline-block;
+            margin-bottom: 20px;
+            color: #1890ff;
+            text-decoration: none;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1 id="examTitle">在线答题</h1>
+    </header>
+
+    <div class="container">
+        <div id="loading" class="loading">
+            加载中...
+        </div>
+
+        <div id="error" class="error" style="display: none;">
+            试卷不存在或加载失败
+        </div>
+
+        <div id="startView" style="display: none;">
+            <div class="card">
+                <h2 id="examTitle2">试卷标题</h2>
+                <div class="exam-info">
+                    <p id="examDesc">试卷描述</p>
+                    <p id="examMeta"></p>
+                </div>
+                <div class="form-group">
+                    <label>请输入您的工号</label>
+                    <input type="text" id="employeeId" placeholder="请输入工号">
+                </div>
+                <div class="form-group">
+                    <label>请输入您的姓名</label>
+                    <input type="text" id="studentName" placeholder="请输入姓名">
+                </div>
+                <button class="btn btn-primary" onclick="startExam()" style="width: 100%;">开始答题</button>
+            </div>
+        </div>
+
+        <div id="examView" style="display: none;">
+            <div class="card">
+                <h2 id="currentExamTitle"></h2>
+                <div id="questionsContainer"></div>
+                <button class="btn btn-success" onclick="submitExam()" style="width: 100%; margin-top: 20px;">提交答案</button>
+            </div>
+        </div>
+
+        <div id="resultView" style="display: none;">
+            <div class="result-card">
+                <h2>答题结果</h2>
+                <div class="pass-status" id="passStatus"></div>
+                <div class="score" id="finalScore">0 / 100</div>
+                <p id="studentNameDisplay"></p>
+            </div>
+
+            <div class="result-detail">
+                <h3 style="margin-bottom: 15px;">答案详情</h3>
+                <div id="resultDetails"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let examId = null;
+        let examData = null;
+        let studentName = '';
+        let employeeId = '';
+
+        function getExamIdFromUrl() {
+            const path = window.location.pathname;
+            const match = path.match(/\/exam\/(\d+)/);
+            return match ? parseInt(match[1]) : null;
+        }
+
+        async function loadExam() {
+            examId = getExamIdFromUrl();
+
+            if (!examId) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+                return;
+            }
+
+            try {
+                const response = await fetch(`/exam/api/exams/${examId}`);
+                if (!response.ok) {
+                    throw new Error('试卷不存在');
+                }
+
+                examData = await response.json();
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('startView').style.display = 'block';
+                document.getElementById('examTitle').textContent = examData.title;
+                document.getElementById('examTitle2').textContent = examData.title;
+                document.getElementById('examDesc').textContent = examData.description || '暂无描述';
+
+                const totalScore = examData.questions.reduce((sum, q) => sum + q.score, 0);
+                document.getElementById('examMeta').textContent =
+                    `共 ${examData.questions.length} 题，总分 ${totalScore} 分`;
+
+            } catch (error) {
+                console.error('加载失败:', error);
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function startExam() {
+            studentName = document.getElementById('studentName').value.trim();
+            employeeId = document.getElementById('employeeId').value.trim();
+
+            if (!studentName) {
+                alert('请输入姓名');
+                return;
+            }
+
+            document.getElementById('startView').style.display = 'none';
+            document.getElementById('examView').style.display = 'block';
+            document.getElementById('currentExamTitle').textContent = examData.title;
+
+            displayQuestions();
+        }
+
+        function displayQuestions() {
+            const container = document.getElementById('questionsContainer');
+            const typeLabels = {
+                'single': '单选题',
+                'multiple': ' [多选]',
+                'truefalse': '判断题',
+                'fillblank': ' [填空]',
+                'essay': ' [问答]'
+            };
+
+            container.innerHTML = examData.questions.map((q, i) => {
+                if (q.question_type === 'truefalse') {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)</h4>
+                            <label class="answer-option">
+                                <input type="radio" name="answer-${i}" value="TRUE" onclick="selectOption(this)"> <span class="tf-symbol">√</span> 正确
+                            </label>
+                            <label class="answer-option">
+                                <input type="radio" name="answer-${i}" value="FALSE" onclick="selectOption(this)"> <span class="tf-symbol">×</span> 错误
+                            </label>
+                        </div>
+                    `;
+                } else if (q.question_type === 'fillblank') {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)${typeLabels[q.question_type]}</h4>
+                            <input type="text" class="fillblank-input" name="answer-${i}" placeholder="请输入答案">
+                        </div>
+                    `;
+                } else if (q.question_type === 'essay') {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)${typeLabels[q.question_type]}</h4>
+                            <textarea class="essay-input" name="answer-${i}" placeholder="请在此输入答案" style="width: 100%; height: 150px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                        </div>
+                    `;
+                } else if (q.question_type === 'multiple') {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)${typeLabels[q.question_type]}</h4>
+                            ${q.options.map((opt, j) => `
+                                <label class="answer-option">
+                                    <input type="checkbox" name="answer-${i}" value="${String.fromCharCode(65 + j)}" onclick="toggleMultiple(this)">
+                                    ${String.fromCharCode(65 + j)}. ${opt}
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div class="question-display">
+                            <h4>${i + 1}. ${q.question_text} (${q.score}分)</h4>
+                            ${q.options.map((opt, j) => `
+                                <label class="answer-option">
+                                    <input type="radio" name="answer-${i}" value="${String.fromCharCode(65 + j)}" onclick="selectOption(this)">
+                                    ${String.fromCharCode(65 + j)}. ${opt}
+                                </label>
+                            `).join('')}
+                        </div>
+                    `;
+                }
+            }).join('');
+        }
+
+        function selectOption(el) {
+            const label = el.tagName === 'INPUT' ? el.closest('label') : el;
+            const container = label.closest('.question-display');
+            container.querySelectorAll('.answer-option').forEach(opt => opt.classList.remove('selected'));
+            label.classList.add('selected');
+        }
+
+        function toggleMultiple(el) {
+            const label = el.tagName === 'INPUT' ? el.closest('label') : el;
+            label.classList.toggle('selected');
+        }
+
+        async function submitExam() {
+            const answers = [];
+            const questionDisplays = document.querySelectorAll('.question-display');
+
+            questionDisplays.forEach((q, i) => {
+                const inputs = q.querySelectorAll('input');
+                const textInput = q.querySelector('input[type="text"]');
+                const textareaInput = q.querySelector('textarea');
+
+                if (textareaInput) {
+                    answers.push(textareaInput.value.trim());
+                } else if (textInput) {
+                    answers.push(textInput.value.trim());
+                } else if (inputs[0]?.type === 'checkbox') {
+                    const checked = Array.from(inputs).filter(inp => inp.checked).map(inp => inp.value);
+                    answers.push(checked.join(','));
+                } else {
+                    const checked = Array.from(inputs).find(inp => inp.checked);
+                    answers.push(checked ? checked.value : '');
+                }
+            });
+
+            try {
+                const response = await fetch('/exam/api/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        exam_id: examId,
+                        student_name: studentName,
+                        employee_id: employeeId,
+                        answers: answers
+                    })
+                });
+
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.error || '提交失败');
+                }
+
+                const result = await response.json();
+                showResult(result);
+            } catch (error) {
+                console.error('提交失败:', error);
+                alert('提交失败: ' + error.message);
+            }
+        }
+
+        function showResult(submission) {
+            document.getElementById('examView').style.display = 'none';
+            document.getElementById('resultView').style.display = 'block';
+
+            const totalScore = examData.questions.reduce((sum, q) => sum + q.score, 0);
+            const passScore = totalScore * 0.6;
+
+            document.getElementById('finalScore').textContent = `${submission.score} / ${totalScore}`;
+            document.getElementById('passStatus').textContent =
+                submission.score >= passScore ? '🎉 恭喜合格！' : '❌ 不合格，继续加油！';
+            document.getElementById('studentNameDisplay').textContent = `工号：${employeeId}  姓名：${studentName}`;
+
+            const typeLabels = {
+                'single': '单选题',
+                'multiple': '多选题',
+                'truefalse': '判断题',
+                'fillblank': '填空题'
+            };
+
+            document.getElementById('resultDetails').innerHTML = examData.questions.map((q, i) => {
+                const userAnswer = submission.answers[i] || '';
+                let isCorrect = false;
+
+                if (q.question_type === 'multiple') {
+                    const userSet = new Set(userAnswer.toUpperCase().split(',').filter(Boolean));
+                    const correctSet = new Set(q.correct_answer.toUpperCase().split(',').filter(Boolean));
+                    isCorrect = userSet.size === correctSet.size && [...userSet].every(a => correctSet.has(a));
+                } else if (q.question_type === 'fillblank') {
+                    isCorrect = userAnswer.toUpperCase().trim() === q.correct_answer.toUpperCase().trim();
+                } else {
+                    isCorrect = userAnswer.toUpperCase().trim() === q.correct_answer.toUpperCase().trim();
+                }
+
+                let optionsHtml = '';
+                if (q.question_type === 'single' || q.question_type === 'multiple') {
+                    optionsHtml = `
+                        <div class="question-options">
+                            ${q.options.map((opt, j) => {
+                                const optionLetter = String.fromCharCode(65 + j);
+                                const isUserAnswer = userAnswer.toUpperCase().includes(optionLetter);
+                                const isCorrectAnswer = q.correct_answer.toUpperCase().includes(optionLetter);
+                                let optionClass = '';
+                                if (isCorrectAnswer && isUserAnswer) {
+                                    optionClass = 'option-correct-user';
+                                } else if (isCorrectAnswer) {
+                                    optionClass = 'option-correct';
+                                } else if (isUserAnswer) {
+                                    optionClass = 'option-user';
+                                }
+                                return `
+                                    <div class="option-item ${optionClass}">
+                                        <span class="option-letter">${optionLetter}.</span>
+                                        <span class="option-text">${opt}</span>
+                                        ${isCorrectAnswer ? '<span class="option-mark">✓</span>' : ''}
+                                    </div>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+                }
+
+                return `
+                    <div class="result-question">
+                        <h5 class="${isCorrect ? '' : 'wrong'}">
+                            ${i + 1}. ${q.question_text}
+                            <span class="type-badge type-${q.question_type}">${typeLabels[q.question_type]}</span>
+                        </h5>
+                        ${optionsHtml}
+                        <p class="your-answer">你的答案: ${userAnswer || '(未作答)'}</p>
+                        <p class="correct-answer">正确答案: ${q.correct_answer}</p>
+                        <p style="color: ${isCorrect ? '#52c41a' : '#ff4d4f'}; margin-top: 5px;">
+                            ${isCorrect ? '✓ 正确' : '✗ 错误'} (${q.score}分)
+                        </p>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        loadExam();
+    </script>
+</body>
+</html>
