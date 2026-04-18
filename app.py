@@ -9,8 +9,7 @@ app = Flask(__name__, static_folder='static')
 CORS(app, resources={r"/exam/*": {"origins": "*"}})
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-#app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'exam.db')
-app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///' + os.path.join(basedir, 'exam.db'))
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
