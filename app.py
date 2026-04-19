@@ -10,34 +10,13 @@ CORS(app, resources={r"/exam/*": {"origins": "*"}})
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 # 处理PostgreSQL URL格式
-from urllib.parse import quote_plus
 db_url = os.environ.get('DATABASE_URL')
 print(f"原始 DATABASE_URL: {db_url}")
 
-# 检查是否是 Railway 变量引用格式或无效格式
-if db_url and isinstance(db_url, str):
-    # 移除变量引用格式
-    if db_url.startswith('$(') and db_url.endswith(')'):
-        print("检测到 Railway 变量引用格式，尝试从其他环境变量构建连接")
-        # 尝试从单独的环境变量构建连接
-        pg_user = os.environ.get('PGUSER')
-        pg_password = os.environ.get('PGPASSWORD')
-        pg_host = os.environ.get('PGHOST')
-        pg_port = os.environ.get('PGPORT', '5432')
-        pg_db = os.environ.get('PGDATABASE')
-        
-        if all([pg_user, pg_password, pg_host, pg_db]):
-            # 对密码和用户名进行 URL 编码
-            encoded_user = quote_plus(pg_user)
-            encoded_password = quote_plus(pg_password)
-            db_url = f"postgresql://{encoded_user}:{encoded_password}@{pg_host}:{pg_port}/{pg_db}"
-            print(f"从单独环境变量构建的 DATABASE_URL: {db_url}")
-        else:
-            db_url = None
-    # 转换 postgres:// 为 postgresql://
-    elif db_url.startswith('postgres://'):
-        db_url = db_url.replace('postgres://', 'postgresql://')
-        print(f"转换后的 DATABASE_URL: {db_url}")
+# 转换 postgres:// 为 postgresql://
+if db_url and db_url.startswith('postgres://'):
+    db_url = db_url.replace('postgres://', 'postgresql://')
+    print(f"转换后的 DATABASE_URL: {db_url}")
 
 # 使用默认的 SQLite
 if not db_url or not isinstance(db_url, str) or not db_url.strip():
