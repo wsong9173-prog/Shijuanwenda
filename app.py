@@ -260,6 +260,9 @@ def delete_user(user_id):
     return jsonify({'message': '用户已删除'})
 
 with app.app_context():
+    # 先删除所有表，确保重新创建完整结构
+    db.drop_all()
+    # 重新创建所有表
     db.create_all()
     admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
     admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
