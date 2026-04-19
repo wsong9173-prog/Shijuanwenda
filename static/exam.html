@@ -533,7 +533,7 @@
             document.getElementById('resultView').style.display = 'block';
 
             const totalScore = examData.questions.reduce((sum, q) => sum + q.score, 0);
-            const passScore = totalScore * 0.6;
+            const passScore = totalScore * 0.75;
 
             document.getElementById('finalScore').textContent = `${submission.score} / ${totalScore}`;
             document.getElementById('passStatus').textContent =

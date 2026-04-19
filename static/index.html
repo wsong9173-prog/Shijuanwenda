@@ -1478,7 +1478,7 @@
 
             document.getElementById('resultScore').textContent = `${submission.score} / ${totalScore}`;
             document.getElementById('resultMessage').textContent =
-                submission.score >= totalScore * 0.6 ? '🎉 合格！' : '❌ 不合格，继续加油！';
+                submission.score >= totalScore * 0.75 ? '🎉 合格！' : '❌ 不合格，继续加油！';
 
             const typeLabels = {
                 'single': '单选题',
@@ -1593,7 +1593,7 @@
                 }
 
                 const totalScore = submission.questions.reduce((sum, q) => sum + q.score, 0);
-                const passScore = totalScore * 0.6;
+                const passScore = totalScore * 0.75;
 
                 const typeLabels = {
                     'single': '单选题',
