@@ -7,6 +7,7 @@ import requests
 
 app = Flask(__name__, static_folder='static')
 CORS(app, resources={r"/exam/*": {"origins": "*"}})
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-2026')
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 # 处理PostgreSQL URL格式
@@ -41,6 +42,7 @@ class Exam(db.Model):
     title = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.now)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=True)
     questions = db.relationship('Question', backref='exam', lazy=True, cascade='all, delete-orphan')
 
     def to_dict(self):
@@ -49,6 +51,7 @@ class Exam(db.Model):
             'title': self.title,
             'description': self.description,
             'created_at': self.created_at.isoformat() if self.created_at else None,
+            'user_id': self.user_id,
             'questions': [q.to_dict() for q in self.questions]
         }
 
@@ -116,20 +119,183 @@ class WebhookConfig(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
 
+class User(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(80), unique=True, nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)
+    is_admin = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.now)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'is_admin': self.is_admin,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }
+
+from functools import wraps
+from flask import session, jsonify
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': '请先登录'}), 401
+        return f(*args, **kwargs)
+    return decorated_function
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        user_id = session.get('user_id')
+        if not user_id:
+            return jsonify({'error': '请先登录'}), 401
+        user = User.query.get(user_id)
+        if not user or not user.is_admin:
+            return jsonify({'error': '需要管理员权限'}), 403
+        return f(*args, **kwargs)
+    return decorated_function
+
+def get_current_user():
+    user_id = session.get('user_id')
+    if user_id:
+        return User.query.get(user_id)
+    return None
+
+def hash_password(password):
+    import hashlib
+    return hashlib.sha256(password.encode()).hexdigest()
+
+def verify_password(password, password_hash):
+    return hash_password(password) == password_hash
+
+@app.route('/exam/api/login', methods=['POST'])
+def login():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+
+    if not username or not password:
+        return jsonify({'error': '请提供用户名和密码'}), 400
+
+    user = User.query.filter_by(username=username).first()
+    if not user or not verify_password(password, user.password_hash):
+        return jsonify({'error': '用户名或密码错误'}), 401
+
+    session['user_id'] = user.id
+    return jsonify({
+        'message': '登录成功',
+        'user': user.to_dict()
+    })
+
+@app.route('/exam/api/logout', methods=['POST'])
+def logout():
+    session.pop('user_id', None)
+    return jsonify({'message': '已退出登录'})
+
+@app.route('/exam/api/current-user', methods=['GET'])
+def get_current_user_info():
+    user = get_current_user()
+    if user:
+        return jsonify({'user': user.to_dict()})
+    return jsonify({'user': None})
+
+@app.route('/exam/api/change-password', methods=['POST'])
+@login_required
+def change_password():
+    data = request.json
+    old_password = data.get('old_password')
+    new_password = data.get('new_password')
+
+    if not old_password or not new_password:
+        return jsonify({'error': '请提供旧密码和新密码'}), 400
+
+    user = get_current_user()
+    if not verify_password(old_password, user.password_hash):
+        return jsonify({'error': '旧密码错误'}), 401
+
+    user.password_hash = hash_password(new_password)
+    db.session.commit()
+    return jsonify({'message': '密码修改成功'})
+
+@app.route('/exam/api/admin/users', methods=['GET'])
+@admin_required
+def get_all_users():
+    users = User.query.order_by(User.created_at.desc()).all()
+    return jsonify([u.to_dict() for u in users])
+
+@app.route('/exam/api/admin/users', methods=['POST'])
+@admin_required
+def create_user():
+    data = request.json
+    username = data.get('username')
+    password = data.get('password')
+    is_admin = data.get('is_admin', False)
+
+    if not username or not password:
+        return jsonify({'error': '请提供用户名和密码'}), 400
+
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': '用户名已存在'}), 400
+
+    user = User(
+        username=username,
+        password_hash=hash_password(password),
+        is_admin=is_admin
+    )
+    db.session.add(user)
+    db.session.commit()
+    return jsonify(user.to_dict()), 201
+
+@app.route('/exam/api/admin/users/<int:user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    user = User.query.get_or_404(user_id)
+    if user.is_admin:
+        return jsonify({'error': '不能删除管理员账户'}), 400
+    db.session.delete(user)
+    db.session.commit()
+    return jsonify({'message': '用户已删除'})
+
 with app.app_context():
     db.create_all()
+    admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+    admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+    admin = User.query.filter_by(username=admin_username).first()
+    if not admin:
+        admin = User(
+            username=admin_username,
+            password_hash=hash_password(admin_password),
+            is_admin=True
+        )
+        db.session.add(admin)
+        db.session.commit()
+        print(f"管理员账户已创建: {admin_username}/{admin_password}")
+    else:
+        print(f"管理员账户已存在: {admin_username}")
 
 @app.route('/exam/')
 def index():
     return send_from_directory('static', 'index.html')
+
+@app.route('/exam/login')
+def login_page():
+    return send_from_directory('static', 'login.html')
 
 @app.route('/exam/exam/<int:exam_id>')
 def exam_page(exam_id):
     return send_from_directory('static', 'exam.html')
 
 @app.route('/exam/api/exams', methods=['GET'])
+@login_required
 def get_exams():
-    exams = Exam.query.order_by(Exam.created_at.desc()).all()
+    user = get_current_user()
+    if user.is_admin:
+        exams = Exam.query.order_by(Exam.created_at.desc()).all()
+    else:
+        exams = Exam.query.filter_by(user_id=user.id).order_by(Exam.created_at.desc()).all()
     return jsonify([e.to_dict() for e in exams])
 
 @app.route('/exam/api/exams/<int:exam_id>', methods=['GET'])
@@ -137,13 +303,25 @@ def get_exam(exam_id):
     exam = Exam.query.get_or_404(exam_id)
     return jsonify(exam.to_dict())
 
+@app.route('/exam/api/exams/<int:exam_id>/manage', methods=['GET'])
+@login_required
+def get_exam_manage(exam_id):
+    exam = Exam.query.get_or_404(exam_id)
+    user = get_current_user()
+    if not user.is_admin and exam.user_id != user.id:
+        return jsonify({'error': '无权访问此试卷'}), 403
+    return jsonify(exam.to_dict())
+
 @app.route('/exam/api/exams', methods=['POST'])
+@login_required
 def create_exam():
     data = request.json
+    user = get_current_user()
 
     exam = Exam(
         title=data.get('title'),
-        description=data.get('description', '')
+        description=data.get('description', ''),
+        user_id=user.id
     )
     db.session.add(exam)
     db.session.flush()
@@ -163,8 +341,12 @@ def create_exam():
     return jsonify(exam.to_dict()), 201
 
 @app.route('/exam/api/exams/<int:exam_id>', methods=['PUT'])
+@login_required
 def update_exam(exam_id):
     exam = Exam.query.get_or_404(exam_id)
+    user = get_current_user()
+    if not user.is_admin and exam.user_id != user.id:
+        return jsonify({'error': '无权修改此试卷'}), 403
     data = request.json
 
     exam.title = data.get('title', exam.title)
@@ -187,8 +369,12 @@ def update_exam(exam_id):
     return jsonify(exam.to_dict())
 
 @app.route('/exam/api/exams/<int:exam_id>', methods=['DELETE'])
+@login_required
 def delete_exam(exam_id):
     exam = Exam.query.get_or_404(exam_id)
+    user = get_current_user()
+    if not user.is_admin and exam.user_id != user.id:
+        return jsonify({'error': '无权删除此试卷'}), 403
     db.session.delete(exam)
     db.session.commit()
     return jsonify({'message': '试卷已删除'})
@@ -265,6 +451,7 @@ def get_submissions(exam_id):
     return jsonify([s.to_dict() for s in submissions])
 
 @app.route('/exam/api/send-to-wechat', methods=['POST'])
+@login_required
 def send_to_wechat():
     data = request.json
     exam_id = data.get('exam_id')
@@ -306,11 +493,13 @@ def send_to_wechat():
         return jsonify({'error': f'发送失败: {str(e)}'}), 400
 
 @app.route('/exam/api/webhooks', methods=['GET'])
+@login_required
 def get_webhooks():
     webhooks = WebhookConfig.query.order_by(WebhookConfig.created_at.desc()).all()
     return jsonify([w.to_dict() for w in webhooks])
 
 @app.route('/exam/api/webhooks', methods=['POST'])
+@login_required
 def create_webhook():
     data = request.json
     webhook = WebhookConfig(
@@ -322,6 +511,7 @@ def create_webhook():
     return jsonify(webhook.to_dict()), 201
 
 @app.route('/exam/api/webhooks/<int:webhook_id>', methods=['DELETE'])
+@login_required
 def delete_webhook(webhook_id):
     webhook = WebhookConfig.query.get_or_404(webhook_id)
     db.session.delete(webhook)
@@ -329,11 +519,13 @@ def delete_webhook(webhook_id):
     return jsonify({'message': 'Webhook已删除'})
 
 @app.route('/exam/api/submission/<int:submission_id>', methods=['GET'])
+@login_required
 def get_submission(submission_id):
     submission = Submission.query.get_or_404(submission_id)
     return jsonify(submission.to_dict(include_questions=True))
 
 @app.route('/exam/api/submission/<int:submission_id>', methods=['DELETE'])
+@login_required
 def delete_submission(submission_id):
     submission = Submission.query.get_or_404(submission_id)
     db.session.delete(submission)
@@ -341,6 +533,7 @@ def delete_submission(submission_id):
     return jsonify({'message': '提交记录已删除'})
 
 @app.route('/exam/api/upload', methods=['POST'])
+@login_required
 def upload_file():
     if 'file' not in request.files:
         return jsonify({'error': '没有文件上传'}), 400
@@ -589,4 +782,4 @@ def parse_word(filepath):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
-    app.run(host='0.0.0.0', port=port)
+    app.run(host='0.0.0.0', port=port, debug=True)

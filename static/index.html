@@ -460,7 +460,18 @@
 </head>
 <body>
     <header>
-        <h1>📝 试卷管理系统</h1>
+        <div style="display: flex; justify-content: space-between; align-items: center; max-width: 1200px; margin: 0 auto; padding: 0 20px;">
+            <h1>📝 试卷管理系统</h1>
+            <div style="display: flex; align-items: center; gap: 15px;">
+                <span id="userInfo" style="display: none;">
+                    <span id="usernameDisplay"></span>
+                    <span id="adminBadge" style="background: #faad14; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px; margin-left: 5px; display: none;">管理员</span>
+                </span>
+                <button id="btnUserManagement" class="btn" style="background: #722ed1; color: white; display: none;" onclick="showView('users')">用户管理</button>
+                <button id="btnChangePassword" class="btn" style="background: #666; color: white; display: none;" onclick="showChangePasswordModal()">修改密码</button>
+                <button id="btnLogout" class="btn" style="background: #ff4d4f; color: white; display: none;" onclick="logout()">退出登录</button>
+            </div>
+        </div>
     </header>
 
     <div class="container">
@@ -468,6 +479,7 @@
             <button class="active" onclick="showView('list')">试卷列表</button>
             <button onclick="showView('create')">创建试卷</button>
             <button onclick="showView('webhooks')">企业微信配置</button>
+            <button id="navUserManagement" onclick="showView('users')" style="display: none;">用户管理</button>
         </div>
 
         <div id="listView" class="exam-view active">
@@ -593,6 +605,54 @@
                 <div id="webhooksList" style="margin-top: 30px;"></div>
             </div>
         </div>
+
+        <div id="usersView" class="exam-view">
+            <div class="card">
+                <h2>用户管理</h2>
+                <p style="color: #666; margin-bottom: 20px;">管理员可以添加、删除普通用户</p>
+
+                <div class="form-group" style="background: #f0f5ff; padding: 20px; border-radius: 8px;">
+                    <h4 style="margin-bottom: 15px; color: #1890ff;">添加新用户</h4>
+                    <div style="display: grid; grid-template-columns: 1fr 1fr 150px auto; gap: 10px; align-items: end;">
+                        <div>
+                            <label>用户名</label>
+                            <input type="text" id="newUsername" placeholder="请输入用户名">
+                        </div>
+                        <div>
+                            <label>密码</label>
+                            <input type="password" id="newPassword" placeholder="请输入密码">
+                        </div>
+                        <div>
+                            <label>&nbsp;</label>
+                            <label style="display: flex; align-items: center; gap: 5px;">
+                                <input type="checkbox" id="newUserIsAdmin"> 管理员
+                            </label>
+                        </div>
+                        <button class="btn btn-primary" onclick="addUser()">添加用户</button>
+                    </div>
+                </div>
+
+                <div id="usersList" style="margin-top: 30px;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="changePasswordModal" class="modal">
+        <div class="modal-content">
+            <h3>修改密码</h3>
+            <div class="form-group">
+                <label>旧密码</label>
+                <input type="password" id="oldPassword" placeholder="请输入旧密码">
+            </div>
+            <div class="form-group">
+                <label>新密码</label>
+                <input type="password" id="newPasswordInput" placeholder="请输入新密码">
+            </div>
+            <div class="modal-actions">
+                <button class="btn" onclick="closeChangePasswordModal()" style="background: #ddd;">取消</button>
+                <button class="btn btn-primary" onclick="confirmChangePassword()">确认修改</button>
+            </div>
+        </div>
     </div>
 
     <div id="wechatModal" class="modal">
@@ -620,6 +680,188 @@
         let currentSubmission = null;
         let questions = [];
         let uploadedQuestions = [];
+        let currentUser = null;
+
+        async function checkLoginStatus() {
+            try {
+                const response = await fetch('/exam/api/current-user');
+                const result = await response.json();
+                if (result.user) {
+                    currentUser = result.user;
+                    updateUserUI();
+                } else {
+                    window.location.href = '/exam/login';
+                }
+            } catch (error) {
+                window.location.href = '/exam/login';
+            }
+        }
+
+        function updateUserUI() {
+            if (!currentUser) return;
+
+            document.getElementById('userInfo').style.display = 'inline';
+            document.getElementById('usernameDisplay').textContent = currentUser.username;
+            document.getElementById('btnLogout').style.display = 'inline-block';
+            document.getElementById('btnChangePassword').style.display = 'inline-block';
+
+            if (currentUser.is_admin) {
+                document.getElementById('adminBadge').style.display = 'inline-block';
+                document.getElementById('btnUserManagement').style.display = 'inline-block';
+                document.getElementById('navUserManagement').style.display = 'inline-block';
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetch('/exam/api/logout', { method: 'POST' });
+                localStorage.removeItem('currentUser');
+                window.location.href = '/exam/login';
+            } catch (error) {
+                console.error('退出失败:', error);
+            }
+        }
+
+        function showChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.add('active');
+        }
+
+        function closeChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.remove('active');
+            document.getElementById('oldPassword').value = '';
+            document.getElementById('newPasswordInput').value = '';
+        }
+
+        async function confirmChangePassword() {
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPasswordInput').value;
+
+            if (!oldPassword || !newPassword) {
+                alert('请填写所有字段');
+                return;
+            }
+
+            try {
+                const response = await fetch('/exam/api/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('密码修改成功');
+                    closeChangePasswordModal();
+                } else {
+                    alert(result.error || '修改失败');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        async function loadUsers() {
+            try {
+                const response = await fetch('/exam/api/admin/users');
+                if (response.status === 403) {
+                    alert('需要管理员权限');
+                    return;
+                }
+                const users = await response.json();
+                displayUsers(users);
+            } catch (error) {
+                console.error('加载用户失败:', error);
+            }
+        }
+
+        function displayUsers(users) {
+            const container = document.getElementById('usersList');
+            if (users.length === 0) {
+                container.innerHTML = '<p style="color: #999;">暂无用户</p>';
+                return;
+            }
+
+            container.innerHTML = `
+                <table style="width: 100%; border-collapse: collapse;">
+                    <thead>
+                        <tr style="background: #f5f5f5; text-align: left;">
+                            <th style="padding: 12px; border-bottom: 1px solid #e8e8e8;">用户名</th>
+                            <th style="padding: 12px; border-bottom: 1px solid #e8e8e8;">角色</th>
+                            <th style="padding: 12px; border-bottom: 1px solid #e8e8e8;">创建时间</th>
+                            <th style="padding: 12px; border-bottom: 1px solid #e8e8e8;">操作</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${users.map(user => `
+                            <tr>
+                                <td style="padding: 12px; border-bottom: 1px solid #e8e8e8;">${user.username}</td>
+                                <td style="padding: 12px; border-bottom: 1px solid #e8e8e8;">
+                                    ${user.is_admin ? '<span style="background: #faad14; color: white; padding: 2px 8px; border-radius: 4px; font-size: 12px;">管理员</span>' : '<span style="color: #999;">普通用户</span>'}
+                                </td>
+                                <td style="padding: 12px; border-bottom: 1px solid #e8e8e8;">${new Date(user.created_at).toLocaleDateString()}</td>
+                                <td style="padding: 12px; border-bottom: 1px solid #e8e8e8;">
+                                    ${!user.is_admin ? `<button class="btn btn-danger" onclick="deleteUser(${user.id})" style="padding: 5px 10px; font-size: 12px;">删除</button>` : '<span style="color: #999;">-</span>'}
+                                </td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+        }
+
+        async function addUser() {
+            const username = document.getElementById('newUsername').value.trim();
+            const password = document.getElementById('newPassword').value;
+            const isAdmin = document.getElementById('newUserIsAdmin').checked;
+
+            if (!username || !password) {
+                alert('请填写用户名和密码');
+                return;
+            }
+
+            try {
+                const response = await fetch('/exam/api/admin/users', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password, is_admin: isAdmin })
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('用户添加成功');
+                    document.getElementById('newUsername').value = '';
+                    document.getElementById('newPassword').value = '';
+                    document.getElementById('newUserIsAdmin').checked = false;
+                    loadUsers();
+                } else {
+                    alert(result.error || '添加失败');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        async function deleteUser(userId) {
+            if (!confirm('确定要删除这个用户吗？')) return;
+
+            try {
+                const response = await fetch(`/exam/api/admin/users/${userId}`, {
+                    method: 'DELETE'
+                });
+
+                if (response.ok) {
+                    alert('用户已删除');
+                    loadUsers();
+                } else {
+                    const result = await response.json();
+                    alert(result.error || '删除失败');
+                }
+            } catch (error) {
+                alert('网络错误，请重试');
+            }
+        }
+
+        checkLoginStatus();
 
         async function loadExams() {
             try {
@@ -675,6 +917,12 @@
                 document.getElementById('webhooksView').classList.add('active');
                 document.querySelector('.nav button:nth-child(3)').classList.add('active');
                 loadWebhooks();
+            } else if (view === 'users') {
+                document.getElementById('usersView').classList.add('active');
+                if (document.getElementById('navUserManagement')) {
+                    document.getElementById('navUserManagement').classList.add('active');
+                }
+                loadUsers();
             }
         }
 
@@ -975,10 +1223,14 @@
 
                 const options = [];
                 if (type !== 'truefalse' && type !== 'fillblank' && type !== 'essay') {
-                    options.push(document.getElementById(`q-opt-A-${i}`).value || '');
-                    options.push(document.getElementById(`q-opt-B-${i}`).value || '');
-                    options.push(document.getElementById(`q-opt-C-${i}`).value || '');
-                    options.push(document.getElementById(`q-opt-D-${i}`).value || '');
+                    const optA = document.getElementById(`q-opt-A-${i}`);
+                    const optB = document.getElementById(`q-opt-B-${i}`);
+                    const optC = document.getElementById(`q-opt-C-${i}`);
+                    const optD = document.getElementById(`q-opt-D-${i}`);
+                    if (optA) options.push(optA.value || '');
+                    if (optB) options.push(optB.value || '');
+                    if (optC) options.push(optC.value || '');
+                    if (optD) options.push(optD.value || '');
                 }
 
                 examData.questions.push({
