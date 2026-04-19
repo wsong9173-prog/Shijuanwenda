@@ -32,7 +32,18 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-db = SQLAlchemy(app)
+# 添加数据库连接错误处理
+try:
+    print("正在初始化数据库...")
+    db = SQLAlchemy(app)
+    print("数据库初始化成功！")
+except Exception as e:
+    print(f"数据库初始化失败: {e}")
+    print("使用SQLite作为备选方案...")
+    # 回退到SQLite
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///' + os.path.join(basedir, 'exam.db')
+    print(f"使用SQLite URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
+    db = SQLAlchemy(app)
 
 WECHAT_WORK_API_URL = "https://qyapi.weixin.qq.com/cgi-bin/message/send"
 WECHAT_WORK_GETTOKEN_URL = "https://qyapi.weixin.qq.com/cgi-bin/gettoken"
@@ -260,24 +271,35 @@ def delete_user(user_id):
     return jsonify({'message': '用户已删除'})
 
 with app.app_context():
-    # 先删除所有表，确保重新创建完整结构
-    db.drop_all()
-    # 重新创建所有表
-    db.create_all()
-    admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
-    admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
-    admin = User.query.filter_by(username=admin_username).first()
-    if not admin:
-        admin = User(
-            username=admin_username,
-            password_hash=hash_password(admin_password),
-            is_admin=True
-        )
-        db.session.add(admin)
-        db.session.commit()
-        print(f"管理员账户已创建: {admin_username}/{admin_password}")
-    else:
-        print(f"管理员账户已存在: {admin_username}")
+    try:
+        # 先删除所有表，确保重新创建完整结构
+        print("正在删除旧表...")
+        db.drop_all()
+        print("旧表删除成功")
+        
+        # 重新创建所有表
+        print("正在创建新表...")
+        db.create_all()
+        print("新表创建成功")
+        
+        # 创建管理员账户
+        admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
+        admin = User.query.filter_by(username=admin_username).first()
+        if not admin:
+            admin = User(
+                username=admin_username,
+                password_hash=hash_password(admin_password),
+                is_admin=True
+            )
+            db.session.add(admin)
+            db.session.commit()
+            print(f"管理员账户已创建: {admin_username}/{admin_password}")
+        else:
+            print(f"管理员账户已存在: {admin_username}")
+    except Exception as e:
+        print(f"数据库操作失败: {e}")
+        print("应用将继续运行，但数据库功能可能受限")
 
 @app.route('/exam/')
 def index():
