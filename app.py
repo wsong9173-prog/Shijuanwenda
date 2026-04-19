@@ -10,6 +10,7 @@ CORS(app, resources={r"/exam/*": {"origins": "*"}})
 
 basedir = os.path.abspath(os.path.dirname(__file__))
 # 处理PostgreSQL URL格式
+from urllib.parse import quote_plus
 db_url = os.environ.get('DATABASE_URL')
 print(f"原始 DATABASE_URL: {db_url}")
 
@@ -26,7 +27,10 @@ if db_url and isinstance(db_url, str):
         pg_db = os.environ.get('PGDATABASE')
         
         if all([pg_user, pg_password, pg_host, pg_db]):
-            db_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+            # 对密码和用户名进行 URL 编码
+            encoded_user = quote_plus(pg_user)
+            encoded_password = quote_plus(pg_password)
+            db_url = f"postgresql://{encoded_user}:{encoded_password}@{pg_host}:{pg_port}/{pg_db}"
             print(f"从单独环境变量构建的 DATABASE_URL: {db_url}")
         else:
             db_url = None
