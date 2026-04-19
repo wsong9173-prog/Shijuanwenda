@@ -11,9 +11,21 @@ CORS(app, resources={r"/exam/*": {"origins": "*"}})
 basedir = os.path.abspath(os.path.dirname(__file__))
 # 处理PostgreSQL URL格式
 db_url = os.environ.get('DATABASE_URL')
-if db_url and db_url.startswith('postgres://'):
-    db_url = db_url.replace('postgres://', 'postgresql://')
-app.config['SQLALCHEMY_DATABASE_URI'] = db_url or 'sqlite:///' + os.path.join(basedir, 'exam.db')
+print(f"原始 DATABASE_URL: {db_url}")
+
+# 确保 db_url 存在且不是空字符串
+if db_url and isinstance(db_url, str) and db_url.strip():
+    # 转换 postgres:// 为 postgresql://
+    if db_url.startswith('postgres://'):
+        db_url = db_url.replace('postgres://', 'postgresql://')
+    print(f"转换后的 DATABASE_URL: {db_url}")
+else:
+    # 使用默认的 SQLite
+    db_url = 'sqlite:///' + os.path.join(basedir, 'exam.db')
+    print(f"使用默认 SQLite: {db_url}")
+
+app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+print(f"最终数据库连接 URL: {app.config['SQLALCHEMY_DATABASE_URI']}")
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['UPLOAD_FOLDER'] = os.path.join(basedir, 'uploads')
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
