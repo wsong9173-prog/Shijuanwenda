@@ -13,14 +13,30 @@ basedir = os.path.abspath(os.path.dirname(__file__))
 db_url = os.environ.get('DATABASE_URL')
 print(f"原始 DATABASE_URL: {db_url}")
 
-# 确保 db_url 存在且不是空字符串
-if db_url and isinstance(db_url, str) and db_url.strip():
+# 检查是否是 Railway 变量引用格式或无效格式
+if db_url and isinstance(db_url, str):
+    # 移除变量引用格式
+    if db_url.startswith('$(') and db_url.endswith(')'):
+        print("检测到 Railway 变量引用格式，尝试从其他环境变量构建连接")
+        # 尝试从单独的环境变量构建连接
+        pg_user = os.environ.get('PGUSER')
+        pg_password = os.environ.get('PGPASSWORD')
+        pg_host = os.environ.get('PGHOST')
+        pg_port = os.environ.get('PGPORT', '5432')
+        pg_db = os.environ.get('PGDATABASE')
+        
+        if all([pg_user, pg_password, pg_host, pg_db]):
+            db_url = f"postgresql://{pg_user}:{pg_password}@{pg_host}:{pg_port}/{pg_db}"
+            print(f"从单独环境变量构建的 DATABASE_URL: {db_url}")
+        else:
+            db_url = None
     # 转换 postgres:// 为 postgresql://
-    if db_url.startswith('postgres://'):
+    elif db_url.startswith('postgres://'):
         db_url = db_url.replace('postgres://', 'postgresql://')
-    print(f"转换后的 DATABASE_URL: {db_url}")
-else:
-    # 使用默认的 SQLite
+        print(f"转换后的 DATABASE_URL: {db_url}")
+
+# 使用默认的 SQLite
+if not db_url or not isinstance(db_url, str) or not db_url.strip():
     db_url = 'sqlite:///' + os.path.join(basedir, 'exam.db')
     print(f"使用默认 SQLite: {db_url}")
 
