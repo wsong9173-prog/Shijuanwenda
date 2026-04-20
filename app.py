@@ -427,8 +427,23 @@ def grade_exam(exam, answers):
                 if user_answer.upper() == correct_answer.upper():
                     total_score += question.score
             elif question.question_type == 'fillblank':
-                if user_answer.upper() == correct_answer.upper():
-                    total_score += question.score
+                # 支持多个空，用逗号分隔答案，对一个给一个分
+                user_answers = [u.strip().upper() for u in user_answer.split(',') if u.strip()]
+                correct_answers = [c.strip().upper() for c in correct_answer.split(',') if c.strip()]
+                
+                if correct_answers:
+                    # 计算每个空的分值
+                    points_per_blank = question.score / len(correct_answers)
+                    
+                    # 检查每个空的答案
+                    correct_count = 0
+                    for i in range(min(len(user_answers), len(correct_answers))):
+                        if user_answers[i] == correct_answers[i]:
+                            correct_count += 1
+                    
+                    # 计算得分
+                    score = int(correct_count * points_per_blank)
+                    total_score += score
             elif question.question_type == 'essay':
                 score = 0
                 if user_answer and correct_answer:
@@ -784,4 +799,4 @@ def parse_word(filepath):
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 8000))
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=False)

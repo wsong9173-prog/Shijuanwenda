@@ -1141,7 +1141,15 @@
                 optionsContainer.innerHTML = `
                     <div class="form-group">
                         <label>正确答案</label>
-                        <input type="text" id="q-answer-${index}" placeholder="请输入正确答案">
+                        <div id="fillblank-answers-${index}">
+                            <div class="fillblank-answer-item">
+                                <input type="text" class="fillblank-answer-input" placeholder="请输入答案" style="width: 80%; margin-right: 10px;">
+                                <button type="button" onclick="addFillblankAnswer(${index})" style="padding: 5px 10px; background: #1890ff; color: white; border: none; border-radius: 4px; cursor: pointer;">+</button>
+                            </div>
+                        </div>
+                        <p style="color: #1890ff; font-size: 12px; margin-top: 5px;">
+                            <strong>提示：</strong>每个空单独输入答案，系统会自动为每个空计分
+                        </p>
                     </div>
                 `;
             } else if (type === 'essay') {
@@ -1195,6 +1203,22 @@
             });
         }
 
+        function addFillblankAnswer(index) {
+            const container = document.getElementById(`fillblank-answers-${index}`);
+            const newItem = document.createElement('div');
+            newItem.className = 'fillblank-answer-item';
+            newItem.innerHTML = `
+                <input type="text" class="fillblank-answer-input" placeholder="请输入答案" style="width: 80%; margin-right: 10px;">
+                <button type="button" onclick="removeFillblankAnswer(this)" style="padding: 5px 10px; background: #ff4d4f; color: white; border: none; border-radius: 4px; cursor: pointer;">-</button>
+            `;
+            container.appendChild(newItem);
+        }
+
+        function removeFillblankAnswer(button) {
+            const item = button.parentElement;
+            item.remove();
+        }
+
         document.getElementById('examForm').addEventListener('submit', async (e) => {
             e.preventDefault();
 
@@ -1211,7 +1235,11 @@
                 if (type === 'multiple') {
                     const checked = document.querySelectorAll(`input[name="correct-${i}"]:checked`);
                     correctAnswer = Array.from(checked).map(c => c.value).join(',');
-                } else if (type === 'fillblank' || type === 'essay') {
+                } else if (type === 'fillblank') {
+                    const answerInputs = document.querySelectorAll(`#fillblank-answers-${i} .fillblank-answer-input`);
+                    const answers = Array.from(answerInputs).map(input => input.value.trim()).filter(answer => answer);
+                    correctAnswer = answers.join(',');
+                } else if (type === 'essay') {
                     correctAnswer = document.getElementById(`q-answer-${i}`).value.trim();
                 } else if (type === 'truefalse') {
                     const selected = document.querySelector(`input[name="correct-${i}"]:checked`);

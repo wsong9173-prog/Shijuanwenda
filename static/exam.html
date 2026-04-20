@@ -428,10 +428,21 @@
                         </div>
                     `;
                 } else if (q.question_type === 'fillblank') {
+                    // 计算答案数量
+                    const correctAnswers = q.correct_answer ? q.correct_answer.split(',').filter(a => a.trim()) : [];
+                    const blankCount = Math.max(1, correctAnswers.length);
+                    
+                    let inputHtml = '';
+                    for (let j = 0; j < blankCount; j++) {
+                        inputHtml += `
+                            <input type="text" class="fillblank-input" name="answer-${i}-${j}" placeholder="请输入第${j + 1}个答案" style="margin-bottom: 10px;">
+                        `;
+                    }
+                    
                     return `
                         <div class="question-display">
                             <h4>${i + 1}. ${q.question_text} (${q.score}分)${typeLabels[q.question_type]}</h4>
-                            <input type="text" class="fillblank-input" name="answer-${i}" placeholder="请输入答案">
+                            ${inputHtml}
                         </div>
                     `;
                 } else if (q.question_type === 'essay') {
@@ -487,13 +498,17 @@
 
             questionDisplays.forEach((q, i) => {
                 const inputs = q.querySelectorAll('input');
-                const textInput = q.querySelector('input[type="text"]');
+                const textInputs = q.querySelectorAll('input[type="text"]');
                 const textareaInput = q.querySelector('textarea');
 
                 if (textareaInput) {
                     answers.push(textareaInput.value.trim());
-                } else if (textInput) {
-                    answers.push(textInput.value.trim());
+                } else if (textInputs.length > 1) {
+                    // 处理填空题的多个输入框
+                    const fillblankAnswers = Array.from(textInputs).map(input => input.value.trim()).filter(answer => answer);
+                    answers.push(fillblankAnswers.join(','));
+                } else if (textInputs.length === 1) {
+                    answers.push(textInputs[0].value.trim());
                 } else if (inputs[0]?.type === 'checkbox') {
                     const checked = Array.from(inputs).filter(inp => inp.checked).map(inp => inp.value);
                     answers.push(checked.join(','));
