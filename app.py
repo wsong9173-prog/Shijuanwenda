@@ -10,9 +10,19 @@ CORS(app, resources={r"/exam/*": {"origins": "*"}})
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-secret-key-2026')
 
 basedir = os.path.abspath(os.path.dirname(__file__))
-# 强制使用SQLite，避免PostgreSQL依赖问题
-db_url = 'sqlite:///' + os.path.join(basedir, 'exam.db')
-print(f"使用SQLite: {db_url}")
+# 优先使用PostgreSQL，如果失败则回退到SQLite
+db_url = os.environ.get('DATABASE_URL')
+print(f"原始 DATABASE_URL: {db_url}")
+
+# 转换 postgres:// 为 postgresql://
+if db_url and db_url.startswith('postgres://'):
+    db_url = db_url.replace('postgres://', 'postgresql://')
+    print(f"转换后的 DATABASE_URL: {db_url}")
+
+# 如果没有配置DATABASE_URL，使用SQLite
+if not db_url or not isinstance(db_url, str) or not db_url.strip():
+    db_url = 'sqlite:///' + os.path.join(basedir, 'exam.db')
+    print(f"使用SQLite: {db_url}")
 
 app.config['SQLALCHEMY_DATABASE_URI'] = db_url
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
@@ -21,10 +31,18 @@ app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 
-# 初始化数据库
+# 初始化数据库，添加错误处理
 print("正在初始化数据库...")
-db = SQLAlchemy(app)
-print("数据库初始化成功！")
+try:
+    db = SQLAlchemy(app)
+    print("数据库初始化成功！")
+except Exception as e:
+    print(f"PostgreSQL连接失败: {e}")
+    print("尝试使用SQLite...")
+    db_url = 'sqlite:///' + os.path.join(basedir, 'exam.db')
+    app.config['SQLALCHEMY_DATABASE_URI'] = db_url
+    db = SQLAlchemy(app)
+    print("SQLite初始化成功！")
 
 WECHAT_WORK_API_URL = "https://qyapi.weixin.qq.com/cgi-bin/message/send"
 WECHAT_WORK_GETTOKEN_URL = "https://qyapi.weixin.qq.com/cgi-bin/gettoken"
@@ -252,21 +270,28 @@ def delete_user(user_id):
     return jsonify({'message': '用户已删除'})
 
 with app.app_context():
-    # 先删除所有表，确保重新创建完整结构
-    print("正在删除旧表...")
-    db.drop_all()
-    print("旧表删除成功")
+    # 获取数据库中已存在的表名
+    inspector = db.inspect(db.engine)
+    existing_tables = inspector.get_table_names()
+    print(f"数据库中已存在的表: {existing_tables}")
     
-    # 重新创建所有表
-    print("正在创建新表...")
+    # 检查是否需要初始化（数据库为空时）
+    is_new_database = len(existing_tables) == 0
+    
+    # 创建表结构（不会删除现有表）
+    print("正在同步表结构...")
     db.create_all()
-    print("新表创建成功")
     
-    # 创建管理员账户
-    admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
-    admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
-    admin = User.query.filter_by(username=admin_username).first()
-    if not admin:
+    # 获取创建后的所有表
+    inspector = db.inspect(db.engine)
+    all_tables = inspector.get_table_names()
+    print(f"创建后的所有表: {all_tables}")
+    
+    # 只有在新数据库时才初始化管理员账户
+    if is_new_database:
+        print("检测到新数据库，正在初始化...")
+        admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+        admin_password = os.environ.get('ADMIN_PASSWORD', 'admin123')
         admin = User(
             username=admin_username,
             password_hash=hash_password(admin_password),
@@ -276,7 +301,13 @@ with app.app_context():
         db.session.commit()
         print(f"管理员账户已创建: {admin_username}/{admin_password}")
     else:
-        print(f"管理员账户已存在: {admin_username}")
+        # 检查管理员账户是否存在
+        admin_username = os.environ.get('ADMIN_USERNAME', 'admin')
+        admin = User.query.filter_by(username=admin_username).first()
+        if admin:
+            print(f"管理员账户已存在: {admin_username}")
+        else:
+            print(f"警告: 未找到管理员账户 {admin_username}")
 
 @app.route('/exam/')
 def index():
@@ -466,6 +497,116 @@ def grade_exam(exam, answers):
 def get_submissions(exam_id):
     submissions = Submission.query.filter_by(exam_id=exam_id).order_by(Submission.submitted_at.desc()).all()
     return jsonify([s.to_dict() for s in submissions])
+
+@app.route('/exam/api/export-data', methods=['GET'])
+@login_required
+@admin_required
+def export_data():
+    """导出所有数据为JSON格式"""
+    try:
+        # 导出所有试卷及其题目
+        exams = Exam.query.all()
+        exams_data = []
+        for exam in exams:
+            exam_dict = exam.to_dict()
+            exams_data.append(exam_dict)
+        
+        # 导出所有用户
+        users = User.query.all()
+        users_data = []
+        for user in users:
+            user_dict = user.to_dict()
+            # 不导出密码哈希
+            user_dict.pop('password_hash', None)
+            users_data.append(user_dict)
+        
+        # 导出所有答题记录
+        submissions = Submission.query.all()
+        submissions_data = [s.to_dict() for s in submissions]
+        
+        data = {
+            'export_time': datetime.now().isoformat(),
+            'exams': exams_data,
+            'users': users_data,
+            'submissions': submissions_data
+        }
+        
+        return jsonify(data)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/exam/api/import-data', methods=['POST'])
+@login_required
+@admin_required
+def import_data():
+    """导入数据（从JSON格式恢复）"""
+    try:
+        data = request.json
+        
+        # 导入用户
+        if 'users' in data:
+            for user_data in data['users']:
+                existing_user = User.query.filter_by(username=user_data['username']).first()
+                if not existing_user:
+                    user = User(
+                        username=user_data['username'],
+                        password_hash=hash_password(user_data.get('password', '123456')),
+                        is_admin=user_data.get('is_admin', False)
+                    )
+                    db.session.add(user)
+            db.session.commit()
+        
+        # 导入试卷和题目
+        if 'exams' in data:
+            for exam_data in data['exams']:
+                existing_exam = Exam.query.filter_by(title=exam_data['title']).first()
+                if not existing_exam:
+                    exam = Exam(
+                        title=exam_data['title'],
+                        description=exam_data.get('description', ''),
+                        user_id=exam_data.get('user_id')
+                    )
+                    db.session.add(exam)
+                    db.session.flush()
+                    
+                    # 导入题目
+                    if 'questions' in exam_data:
+                        for q_data in exam_data['questions']:
+                            question = Question(
+                                exam_id=exam.id,
+                                question_text=q_data['question_text'],
+                                question_type=q_data['question_type'],
+                                options=q_data.get('options', ''),
+                                correct_answer=q_data['correct_answer'],
+                                score=q_data.get('score', 10)
+                            )
+                            db.session.add(question)
+            db.session.commit()
+        
+        # 导入答题记录
+        if 'submissions' in data:
+            for sub_data in data['submissions']:
+                existing_sub = Submission.query.filter_by(
+                    exam_id=sub_data['exam_id'],
+                    student_name=sub_data['student_name'],
+                    employee_id=sub_data.get('employee_id')
+                ).first()
+                if not existing_sub:
+                    submission = Submission(
+                        exam_id=sub_data['exam_id'],
+                        student_name=sub_data['student_name'],
+                        employee_id=sub_data.get('employee_id'),
+                        answers=sub_data.get('answers', ''),
+                        score=sub_data.get('score', 0),
+                        graded=sub_data.get('graded', False)
+                    )
+                    db.session.add(submission)
+            db.session.commit()
+        
+        return jsonify({'message': '数据导入成功'})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/exam/api/send-to-wechat', methods=['POST'])
 @login_required
